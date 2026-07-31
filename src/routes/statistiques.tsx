@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useNuits } from "@/lib/sleep/store";
 import { calculerStatistiques } from "@/lib/sleep/stats";
-import { dateCourte, depuisOrigine, dureeHumaine, fromMinutes } from "@/lib/sleep/time";
+import { dateCourte, dureeHumaine, fromMinutes } from "@/lib/sleep/time";
 
 export const Route = createFileRoute("/statistiques")({
   head: () => ({
@@ -57,8 +57,8 @@ function Statistiques() {
     .slice()
     .reverse()
     .map((p) => {
-      const coucher = depuisOrigine(p.coucher) / 60;
-      const lever = depuisOrigine(p.lever) / 60;
+      const coucher = p.coucher / 60;
+      const lever = p.lever / 60;
       return {
         jour: dateCourte(p.date),
         coucher,

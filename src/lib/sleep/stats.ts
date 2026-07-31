@@ -14,7 +14,7 @@ export interface Statistiques {
   nbSiestes: number;
   tempsTotalSieste: number;
   efficacite: number;
-  serie: { date: string; sommeil: number; eveil: number; sieste: number }[];
+  serie: { date: string; sommeil: number; eveil: number; sieste: number; coucher: number; lever: number }[];
 }
 
 export function calculerStatistiques(nuits: Nuit[]): Statistiques {
