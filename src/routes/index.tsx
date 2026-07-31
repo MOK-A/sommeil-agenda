@@ -1,10 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Moon, Plus, Star, Sunrise } from "lucide-react";
-import { ApercuGrille } from "@/components/apercu-grille";
+import { Moon, Plus } from "lucide-react";
+import { HistoriqueNuits } from "@/components/historique-nuits";
 import { useNuits, useReglages } from "@/lib/sleep/store";
-import { mesurer } from "@/lib/sleep/grid";
-import { dateISO, dureeHumaine, formatHeure, libelleNuit } from "@/lib/sleep/time";
-import { NOTES, type Note } from "@/lib/sleep/types";
+import { dateISO } from "@/lib/sleep/time";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -25,12 +23,9 @@ export const Route = createFileRoute("/")({
   component: Accueil,
 });
 
-const etoiles: Record<Note, number> = { TB: 5, B: 4, Moy: 3, M: 2, TM: 1 };
-
 function Accueil() {
   const nuits = useNuits();
   const reglages = useReglages();
-  const dernieres = nuits.slice(0, 5);
   const hier = dateISO(new Date(Date.now() - 86400000));
   const dejaRempli = nuits.some((n) => n.date === hier);
 
@@ -67,64 +62,7 @@ function Accueil() {
         </Link>
       </section>
 
-      <section className="mt-8">
-        <h2 className="mb-3 px-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Derniers jours
-        </h2>
-        {dernieres.length === 0 ? (
-          <p className="carte p-6 text-sm text-muted-foreground">
-            Aucune nuit enregistrée pour l'instant.
-          </p>
-        ) : (
-          <ul className="space-y-3">
-            {dernieres.map((nuit) => {
-              const m = mesurer(nuit);
-              return (
-                <li key={nuit.id}>
-                  <Link
-                    to="/saisie"
-                    search={{ id: nuit.id, date: undefined }}
-                    className="carte apparition block p-4"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-semibold">{libelleNuit(nuit.date)}</p>
-                        <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <Moon className="size-3.5" aria-hidden />
-                          {formatHeure(nuit.heureCoucher, reglages.format24h)}
-                          <span aria-hidden>→</span>
-                          <Sunrise className="size-3.5" aria-hidden />
-                          {formatHeure(nuit.heureLever, reglages.format24h)}
-                          <span className="text-foreground/70">· {dureeHumaine(m.tempsSommeil)}</span>
-                        </p>
-                      </div>
-                      <span
-                        className="flex shrink-0 gap-0.5"
-                        aria-label={`Qualité : ${NOTES.find((n) => n.value === nuit.qualiteSommeil)?.label}`}
-                      >
-                        {[1, 2, 3, 4, 5].map((i) => (
-                          <Star
-                            key={i}
-                            className={
-                              i <= etoiles[nuit.qualiteSommeil]
-                                ? "size-4 fill-jour text-jour"
-                                : "size-4 text-muted-foreground/35"
-                            }
-                            aria-hidden
-                          />
-                        ))}
-                      </span>
-                    </div>
-                    <div className="mt-3">
-                      <ApercuGrille nuits={[nuit]} hauteurLigne={26} />
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+      <HistoriqueNuits />
     </main>
   );
 }

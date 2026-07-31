@@ -14,7 +14,7 @@ export interface Statistiques {
   nbSiestes: number;
   tempsTotalSieste: number;
   efficacite: number;
-  serie: { date: string; sommeil: number; eveil: number; sieste: number }[];
+  serie: { date: string; sommeil: number; eveil: number; sieste: number; coucher: number; lever: number }[];
 }
 
 export function calculerStatistiques(nuits: Nuit[]): Statistiques {
@@ -50,7 +50,10 @@ export function calculerStatistiques(nuits: Nuit[]): Statistiques {
     eveilMoyen: somme((i) => mesures[i]!.tempsEveilNocturne) / n,
     heureCoucherMoyenne: fromMinutes(coucherMoyen + ORIGINE),
     heureLeverMoyenne: fromMinutes(leverMoyen + ORIGINE),
-    nbSiestes: nuits.filter((x) => x.sieste?.debut && x.sieste?.fin).length,
+    nbSiestes: nuits.reduce(
+      (s, x) => s + (x.siestes || []).filter((v) => v.debut && v.fin).length,
+      0,
+    ),
     tempsTotalSieste: somme((i) => mesures[i]!.tempsSieste),
     efficacite: auLit > 0 ? Math.round((sommeil / auLit) * 100) : 0,
     serie: nuits
@@ -61,6 +64,8 @@ export function calculerStatistiques(nuits: Nuit[]): Statistiques {
         sommeil: Math.round((mesurer(x).tempsSommeil / 60) * 10) / 10,
         eveil: Math.round((mesurer(x).tempsEveilNocturne / 60) * 10) / 10,
         sieste: Math.round((mesurer(x).tempsSieste / 60) * 10) / 10,
+        coucher: depuisOrigine(x.heureCoucher),
+        lever: depuisOrigine(x.heureLever),
       })),
   };
 }

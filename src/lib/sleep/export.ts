@@ -58,12 +58,15 @@ export function exporterCsv(nuits: Nuit[]) {
       String(Math.round(m.tempsSommeil)),
       String(m.nbReveils),
       String(Math.round(m.tempsEveilNocturne)),
-      n.sieste?.debut ?? "",
-      n.sieste?.fin ?? "",
+      n.siestes?.[0]?.debut ?? "",
+      n.siestes?.[0]?.fin ?? "",
       n.qualiteSommeil,
       n.qualiteReveil,
       n.formeJournee,
-      n.commentaire.replace(/\r?\n/g, " "),
+      [n.traitement, n.commentaire]
+        .filter((v) => v && v.trim())
+        .join(" / ")
+        .replace(/\r?\n/g, " "),
     ];
   });
   const csv = [entetes, ...lignes]

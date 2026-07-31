@@ -83,10 +83,28 @@ export function dessinerAgenda(
 
     const rendu = calculerRendu(nuit);
     for (const barre of rendu.barres) {
+      const x = posX(barre.debut);
+      const l = Math.max(1, posX(barre.fin) - x);
+      if (barre.type === "demi") {
+        // Hachures zébrées en diagonale (1/2 réveil)
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, y + 3, l, h - 6);
+        ctx.clip();
+        ctx.strokeStyle = couleurBarre;
+        ctx.lineWidth = 1.5;
+        for (let d = -h; d < l + h; d += 5) {
+          ctx.beginPath();
+          ctx.moveTo(x + d, y + h - 3);
+          ctx.lineTo(x + d + h, y + 3);
+          ctx.stroke();
+        }
+        ctx.restore();
+        continue;
+      }
       ctx.fillStyle = couleurBarre;
       ctx.globalAlpha = barre.type === "sieste" ? 0.55 : 1;
-      const x = posX(barre.debut);
-      ctx.fillRect(x, y + 3, Math.max(1, posX(barre.fin) - x), h - 6);
+      ctx.fillRect(x, y + 3, l, h - 6);
       ctx.globalAlpha = 1;
     }
 

@@ -8,6 +8,7 @@ import { REGLAGES_DEFAUT } from "./types";
 
 const CLE_NUITS = "journal-sommeil.nuits.v1";
 const CLE_REGLAGES = "journal-sommeil.reglages.v1";
+const CLE_TRAITEMENTS = "journal-sommeil.traitements.v1";
 
 type Ecouteur = () => void;
 const ecouteurs = new Set<Ecouteur>();
@@ -29,8 +30,28 @@ function ecrire(cle: string, valeur: unknown) {
   notifier();
 }
 
+/** Compatibilité avec les anciennes sauvegardes (sieste unique, sans traitement). */
+export function migrer(n: any): Nuit {
+  const siestes = Array.isArray(n?.siestes)
+    ? n.siestes
+    : n?.sieste
+      ? [{ ...n.sieste }]
+      : [];
+  return {
+    ...n,
+    siestes,
+    reveils: Array.isArray(n?.reveils) ? n.reveils : [],
+    somnolences: Array.isArray(n?.somnolences) ? n.somnolences : [],
+    longReveil: typeof n?.longReveil === "number" ? n.longReveil : 0,
+    traitement: typeof n?.traitement === "string" ? n.traitement : "",
+    commentaire: typeof n?.commentaire === "string" ? n.commentaire : "",
+  } as Nuit;
+}
+
 export function chargerNuits(): Nuit[] {
-  return lire<Nuit[]>(CLE_NUITS, []).sort((a, b) => b.date.localeCompare(a.date));
+  return lire<Nuit[]>(CLE_NUITS, [])
+    .map(migrer)
+    .sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export function enregistrerNuit(nuit: Nuit) {
@@ -85,4 +106,29 @@ export function useReglages() {
 
 export function nouvelId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/* ---- Historique des traitements saisis ---- */
+
+export function chargerTraitements(): string[] {
+  return lire<string[]>(CLE_TRAITEMENTS, []);
+}
+
+export function memoriserTraitement(valeur: string) {
+  const v = valeur.trim();
+  if (!v) return;
+  const liste = chargerTraitements().filter((t) => t.toLowerCase() !== v.toLowerCase());
+  ecrire(CLE_TRAITEMENTS, [v, ...liste].slice(0, 12));
+}
+
+export function oublierTraitement(valeur: string) {
+  ecrire(
+    CLE_TRAITEMENTS,
+    chargerTraitements().filter((t) => t !== valeur),
+  );
+}
+
+export function useTraitements() {
+  const [liste] = useSynchro(chargerTraitements);
+  return liste;
 }
