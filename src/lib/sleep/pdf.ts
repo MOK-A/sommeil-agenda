@@ -184,11 +184,30 @@ function dessinerLigne(doc: jsPDF, y: number, nuit?: Nuit) {
   if (!nuit) return;
 
   const rendu = calculerRendu(nuit);
-  doc.setFillColor(155, 155, 155);
   for (const barre of rendu.barres) {
     const x = posX(barre.debut);
     const largeur = posX(barre.fin) - x;
-    if (largeur > 0) doc.rect(x, y + 1, largeur, H_LIGNE - 2, "F");
+    if (largeur <= 0) continue;
+    if (barre.type === "demi") {
+      // 1/2 réveil : hachures diagonales
+      const h = H_LIGNE - 2;
+      doc.setDrawColor(120, 120, 120);
+      doc.setLineWidth(0.3);
+      for (let d = 0; d < largeur + h; d += 1.2) {
+        const x1 = x + d;
+        const x2 = x + d - h;
+        const cx1 = Math.min(x + largeur, Math.max(x, x1));
+        const cx2 = Math.min(x + largeur, Math.max(x, x2));
+        const y1 = y + 1 + h - (cx1 - (x + d - h));
+        const y2 = y + 1 + h - (cx2 - (x + d - h));
+        doc.line(cx1, Math.min(y + 1 + h, Math.max(y + 1, y1)), cx2, Math.min(y + 1 + h, Math.max(y + 1, y2)));
+      }
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.2);
+      continue;
+    }
+    doc.setFillColor(155, 155, 155);
+    doc.rect(x, y + 1, largeur, H_LIGNE - 2, "F");
   }
   if (rendu.coucher !== null) fleche(doc, posX(rendu.coucher), y, H_LIGNE, true);
   if (rendu.lever !== null) fleche(doc, posX(rendu.lever), y, H_LIGNE, false);
@@ -208,9 +227,10 @@ function dessinerLigne(doc: jsPDF, y: number, nuit?: Nuit) {
   notes.forEach((n, i) =>
     doc.text(n, X_NOTES + i * L_NOTE + L_NOTE / 2, y + H_LIGNE - 2.2, { align: "center" }),
   );
-  if (nuit.commentaire) {
+  const remarques = [nuit.traitement, nuit.commentaire].filter((v) => v && v.trim()).join(" / ");
+  if (remarques) {
     doc.setFontSize(6.5);
-    const texte = doc.splitTextToSize(nuit.commentaire, L_REMARQUES - 3)[0] ?? "";
+    const texte = doc.splitTextToSize(remarques, L_REMARQUES - 3)[0] ?? "";
     doc.text(texte, X_REMARQUES + 1.5, y + H_LIGNE - 2.2);
   }
 }

@@ -16,6 +16,8 @@ export interface Interval {
   id: string;
   debut: string;
   fin: string;
+  /** Réveil incomplet ("1/2 réveil") : hachures zébrées sur le graphique. */
+  demi?: boolean;
 }
 
 export interface Nuit {
@@ -27,12 +29,16 @@ export interface Nuit {
   delaiEndormissement: number;
   reveils: Interval[];
   heureLever: string;
-  sieste: Interval | null;
+  siestes: Interval[];
+  /** Durée du long réveil précédant le lever, en minutes. */
+  longReveil: number;
   /** Somnolences ressenties dans la journée (marqueurs "S"). */
   somnolences: string[];
   qualiteSommeil: Note;
   qualiteReveil: Note;
   formeJournee: Note;
+  /** Traitement(s) du jour. */
+  traitement: string;
   commentaire: string;
   majLe: string;
 }

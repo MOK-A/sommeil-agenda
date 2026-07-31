@@ -1,9 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import { BarChart3, CalendarDays, Home, Settings } from "lucide-react";
+import { BarChart3, Home, Settings } from "lucide-react";
 
 const ONGLETS = [
   { to: "/", label: "Accueil", icone: Home },
-  { to: "/historique", label: "Historique", icone: CalendarDays },
   { to: "/statistiques", label: "Statistiques", icone: BarChart3 },
   { to: "/parametres", label: "Paramètres", icone: Settings },
 ] as const;

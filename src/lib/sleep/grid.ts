@@ -14,7 +14,7 @@ export const COLONNES = 48;
 export interface Barre {
   debut: number;
   fin: number;
-  type: "sommeil" | "sieste";
+  type: "sommeil" | "sieste" | "demi";
 }
 
 export interface Rendu {
@@ -55,16 +55,23 @@ export function calculerRendu(nuit: Nuit): Rendu {
     barres.push({ debut: borne(endormissement), fin: borne(lever), type: "sommeil" });
   }
 
-  for (const r of nuit.reveils) {
+  const long = Math.max(0, nuit.longReveil || 0);
+  if (long > 0) barres = soustraire(barres, borne(lever - long), borne(lever));
+
+  const demis: Barre[] = [];
+  for (const r of nuit.reveils || []) {
     if (!r.debut || !r.fin) continue;
     const d = apres(depuisOrigine(r.debut), endormissement);
     const f = apres(depuisOrigine(r.fin), d);
     barres = soustraire(barres, borne(d), borne(f));
+    if (r.demi) demis.push({ debut: borne(d), fin: borne(f), type: "demi" });
   }
+  barres = barres.concat(demis);
 
-  if (nuit.sieste?.debut && nuit.sieste.fin) {
-    const d = apres(depuisOrigine(nuit.sieste.debut), lever);
-    const f = apres(depuisOrigine(nuit.sieste.fin), d);
+  for (const s of nuit.siestes || []) {
+    if (!s.debut || !s.fin) continue;
+    const d = apres(depuisOrigine(s.debut), lever);
+    const f = apres(depuisOrigine(s.fin), d);
     if (d < LARGEUR) barres.push({ debut: borne(d), fin: borne(f), type: "sieste" });
   }
 
@@ -100,12 +107,12 @@ export function mesurer(nuit: Nuit): Mesures {
   const coucher = depuisOrigine(nuit.heureCoucher);
   const lever = apres(depuisOrigine(nuit.heureLever), coucher);
   const auLit = lever - coucher;
-  const reveils = nuit.reveils.filter((r) => r.debut && r.fin);
+  const reveils = (nuit.reveils || []).filter((r) => r.debut && r.fin);
   const eveil = reveils.reduce((s, r) => {
     const d = toMinutes(r.debut);
     const f = toMinutes(r.fin);
     return s + ((f - d + 1440) % 1440);
-  }, 0);
+  }, Math.max(0, nuit.longReveil || 0));
   return {
     tempsSommeil: sommeil,
     tempsEveilNocturne: eveil,

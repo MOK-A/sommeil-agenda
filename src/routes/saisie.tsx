@@ -1,15 +1,25 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Check, Plus, Trash2, X } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { CalendarDays, Check, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { ApercuGrille } from "@/components/apercu-grille";
 import { SelecteurNote } from "@/components/selecteur-note";
-import { Switch } from "@/components/ui/switch";
+import { SelecteurHeure } from "@/components/selecteur-heure";
+import { CurseurDuree } from "@/components/curseur-duree";
+import { Etoiles, ETOILES } from "@/components/etoiles";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
-import { chargerNuits, enregistrerNuit, nouvelId, supprimerNuit } from "@/lib/sleep/store";
-import { dateISO, libelleNuit } from "@/lib/sleep/time";
+import {
+  chargerNuits,
+  enregistrerNuit,
+  memoriserTraitement,
+  nouvelId,
+  oublierTraitement,
+  useTraitements,
+} from "@/lib/sleep/store";
+import { supprimerAvecAnnulation } from "@/lib/sleep/suppression";
+import { dateISO, fromMinutes, libelleNuit, toMinutes } from "@/lib/sleep/time";
 import type { Nuit } from "@/lib/sleep/types";
 
 const recherche = z.object({
@@ -24,7 +34,8 @@ export const Route = createFileRoute("/saisie")({
       { title: "Remplir ma nuit — Journal de Sommeil" },
       {
         name: "description",
-        content: "Saisie guidée : coucher, endormissement, réveils nocturnes, lever, sieste et ressenti.",
+        content:
+          "Saisie guidée : coucher, endormissement, réveils nocturnes, lever, siestes, somnolences et ressenti.",
       },
       { property: "og:title", content: "Remplir ma nuit — Journal de Sommeil" },
       { property: "og:description", content: "Une seule page pour enregistrer votre nuit en 30 secondes." },
@@ -41,28 +52,30 @@ function nuitVide(date: string): Nuit {
     delaiEndormissement: 15,
     reveils: [],
     heureLever: "07:00",
-    sieste: null,
+    siestes: [],
     somnolences: [],
+    longReveil: 0,
     qualiteSommeil: "B",
     qualiteReveil: "B",
     formeJournee: "B",
+    traitement: "",
     commentaire: "",
     majLe: "",
   };
 }
-
-const DELAIS = [0, 15, 30, 45, 60];
 
 function Carte({
   numero,
   titre,
   children,
   action,
+  extra,
 }: {
   numero: number;
   titre: string;
   children: React.ReactNode;
   action?: React.ReactNode;
+  extra?: React.ReactNode;
 }) {
   return (
     <section className="carte apparition p-5">
@@ -72,6 +85,7 @@ function Carte({
             {numero}
           </span>
           {titre}
+          {extra}
         </h2>
         {action}
       </div>
@@ -80,55 +94,53 @@ function Carte({
   );
 }
 
-function ChampHeure({
-  label,
-  valeur,
-  onChange,
-}: {
-  label: string;
-  valeur: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <label className="carte-douce block flex-1 px-4 py-3">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      <input
-        type="time"
-        value={valeur}
-        onChange={(e) => onChange(e.target.value)}
-        className="champ-heure"
-      />
-    </label>
-  );
+/** Décale l'heure de fin quand le début change, en gardant la durée saisie. */
+function decaler(debut: string, ancienDebut: string, ancienneFin: string): string {
+  const duree = (toMinutes(ancienneFin) - toMinutes(ancienDebut) + 1440) % 1440;
+  return fromMinutes((toMinutes(debut) + (duree || 30)) % 1440);
 }
 
 function Saisie() {
   const { id, date } = Route.useSearch();
   const navigate = useNavigate();
+  const traitements = useTraitements();
+  const dateRef = useRef<HTMLInputElement>(null);
   const existante = useMemo(() => (id ? chargerNuits().find((n) => n.id === id) : undefined), [id]);
   const [nuit, setNuit] = useState<Nuit>(
     () => existante ?? nuitVide(date ?? dateISO(new Date(Date.now() - 86400000))),
   );
-  const [delaiLibre, setDelaiLibre] = useState(!DELAIS.includes(nuit.delaiEndormissement));
 
   const maj = (patch: Partial<Nuit>) => setNuit((n) => ({ ...n, ...patch }));
 
+  const moyenne =
+    (ETOILES[nuit.qualiteSommeil] + ETOILES[nuit.qualiteReveil] + ETOILES[nuit.formeJournee]) / 3;
+
   const enregistrer = () => {
+    if (nuit.traitement.trim()) memoriserTraitement(nuit.traitement.trim());
     enregistrerNuit(nuit);
     toast.success("Nuit enregistrée");
-    navigate({ to: "/historique" });
+    navigate({ to: "/" });
   };
 
   return (
     <main className="mx-auto max-w-2xl px-4 pt-6">
-      <header className="mb-5 flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">{libelleNuit(nuit.date)}</h1>
+      <header className="mb-5 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          aria-label="Changer la date"
+          onClick={() => dateRef.current?.showPicker?.() ?? dateRef.current?.focus()}
+          className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-sm"
+        >
+          <CalendarDays className="size-6" aria-hidden />
+        </button>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-2xl font-extrabold tracking-tight">{libelleNuit(nuit.date)}</h1>
           <input
+            ref={dateRef}
             type="date"
             value={nuit.date}
             onChange={(e) => maj({ date: e.target.value })}
-            className="mt-1 bg-transparent text-sm text-muted-foreground outline-none"
+            className="mt-0.5 bg-transparent text-sm text-muted-foreground outline-none"
             aria-label="Date de la nuit"
           />
         </div>
@@ -136,9 +148,9 @@ function Saisie() {
           type="button"
           onClick={() => navigate({ to: "/" })}
           aria-label="Fermer"
-          className="carte-douce grid size-11 place-items-center text-muted-foreground"
+          className="carte-douce grid size-11 shrink-0 place-items-center text-muted-foreground"
         >
-          <X className="size-5" aria-hidden />
+          <X className="size-6" aria-hidden />
         </button>
       </header>
 
@@ -151,7 +163,7 @@ function Saisie() {
 
       <div className="space-y-4">
         <Carte numero={1} titre="Heure du coucher">
-          <ChampHeure
+          <SelecteurHeure
             label="Mise au lit"
             valeur={nuit.heureCoucher}
             onChange={(v) => maj({ heureCoucher: v })}
@@ -159,51 +171,11 @@ function Saisie() {
         </Carte>
 
         <Carte numero={2} titre="Endormissement">
-          <div className="grid grid-cols-3 gap-2">
-            {DELAIS.map((d) => (
-              <button
-                key={d}
-                type="button"
-                aria-pressed={!delaiLibre && nuit.delaiEndormissement === d}
-                onClick={() => {
-                  setDelaiLibre(false);
-                  maj({ delaiEndormissement: d });
-                }}
-                className={cn(
-                  "min-h-14 rounded-2xl text-sm font-semibold transition-all",
-                  !delaiLibre && nuit.delaiEndormissement === d
-                    ? "bg-primary text-primary-foreground"
-                    : "carte-douce text-muted-foreground",
-                )}
-              >
-                {d === 0 ? "Tout de suite" : `${d} min`}
-              </button>
-            ))}
-            <button
-              type="button"
-              aria-pressed={delaiLibre}
-              onClick={() => setDelaiLibre(true)}
-              className={cn(
-                "min-h-14 rounded-2xl text-sm font-semibold transition-all",
-                delaiLibre ? "bg-primary text-primary-foreground" : "carte-douce text-muted-foreground",
-              )}
-            >
-              Autre
-            </button>
-          </div>
-          {delaiLibre && (
-            <label className="carte-douce mt-3 flex items-center gap-3 px-4 py-3">
-              <span className="text-xs font-medium text-muted-foreground">Minutes</span>
-              <input
-                type="number"
-                min={0}
-                max={480}
-                value={nuit.delaiEndormissement}
-                onChange={(e) => maj({ delaiEndormissement: Number(e.target.value) })}
-                className="champ-heure"
-              />
-            </label>
-          )}
+          <CurseurDuree
+            label="Temps pour s'endormir"
+            valeur={nuit.delaiEndormissement}
+            onChange={(v) => maj({ delaiEndormissement: v })}
+          />
         </Carte>
 
         <Carte
@@ -214,7 +186,7 @@ function Saisie() {
               type="button"
               onClick={() =>
                 maj({
-                  reveils: [...nuit.reveils, { id: nouvelId(), debut: "03:00", fin: "03:30" }],
+                  reveils: [...nuit.reveils, { id: nouvelId(), debut: "03:00", fin: "03:30", demi: false }],
                 })
               }
               className="flex min-h-10 items-center gap-1.5 rounded-full bg-secondary px-3 text-sm font-semibold text-primary"
@@ -227,31 +199,108 @@ function Saisie() {
           {nuit.reveils.length === 0 ? (
             <p className="text-sm text-muted-foreground">Aucun réveil noté.</p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-3">
               {nuit.reveils.map((r) => (
-                <li key={r.id} className="flex items-end gap-2">
-                  <ChampHeure
+                <li key={r.id} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <SelecteurHeure
+                      label="Début"
+                      valeur={r.debut}
+                      onChange={(v) =>
+                        maj({
+                          reveils: nuit.reveils.map((x) =>
+                            x.id === r.id ? { ...x, debut: v, fin: decaler(v, x.debut, x.fin) } : x,
+                          ),
+                        })
+                      }
+                    />
+                    <SelecteurHeure
+                      label="Fin"
+                      valeur={r.fin}
+                      onChange={(v) =>
+                        maj({
+                          reveils: nuit.reveils.map((x) => (x.id === r.id ? { ...x, fin: v } : x)),
+                        })
+                      }
+                    />
+                    <button
+                      type="button"
+                      aria-label="Supprimer ce réveil"
+                      onClick={() => maj({ reveils: nuit.reveils.filter((x) => x.id !== r.id) })}
+                      className="carte-douce grid size-12 shrink-0 place-items-center text-destructive"
+                    >
+                      <Trash2 className="size-4" aria-hidden />
+                    </button>
+                  </div>
+                  <label className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={!!r.demi}
+                      onChange={(e) =>
+                        maj({
+                          reveils: nuit.reveils.map((x) =>
+                            x.id === r.id ? { ...x, demi: e.target.checked } : x,
+                          ),
+                        })
+                      }
+                      className="size-5 accent-[var(--color-primary)]"
+                    />
+                    1/2 réveil (hachures zébrées)
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Carte>
+
+        <Carte numero={4} titre="Heure de lever">
+          <SelecteurHeure label="Lever" valeur={nuit.heureLever} onChange={(v) => maj({ heureLever: v })} />
+        </Carte>
+
+        <Carte
+          numero={5}
+          titre="Siestes"
+          action={
+            <button
+              type="button"
+              onClick={() =>
+                maj({ siestes: [...nuit.siestes, { id: nouvelId(), debut: "14:00", fin: "14:30" }] })
+              }
+              className="flex min-h-10 items-center gap-1.5 rounded-full bg-secondary px-3 text-sm font-semibold text-primary"
+            >
+              <Plus className="size-4" aria-hidden />
+              Ajouter
+            </button>
+          }
+        >
+          {nuit.siestes.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Pas de sieste.</p>
+          ) : (
+            <ul className="space-y-2">
+              {nuit.siestes.map((s) => (
+                <li key={s.id} className="flex items-center gap-2">
+                  <SelecteurHeure
                     label="Début"
-                    valeur={r.debut}
+                    valeur={s.debut}
                     onChange={(v) =>
                       maj({
-                        reveils: nuit.reveils.map((x) => (x.id === r.id ? { ...x, debut: v } : x)),
+                        siestes: nuit.siestes.map((x) =>
+                          x.id === s.id ? { ...x, debut: v, fin: decaler(v, x.debut, x.fin) } : x,
+                        ),
                       })
                     }
                   />
-                  <ChampHeure
+                  <SelecteurHeure
                     label="Fin"
-                    valeur={r.fin}
+                    valeur={s.fin}
                     onChange={(v) =>
-                      maj({
-                        reveils: nuit.reveils.map((x) => (x.id === r.id ? { ...x, fin: v } : x)),
-                      })
+                      maj({ siestes: nuit.siestes.map((x) => (x.id === s.id ? { ...x, fin: v } : x)) })
                     }
                   />
                   <button
                     type="button"
-                    aria-label="Supprimer ce réveil"
-                    onClick={() => maj({ reveils: nuit.reveils.filter((x) => x.id !== r.id) })}
+                    aria-label="Supprimer cette sieste"
+                    onClick={() => maj({ siestes: nuit.siestes.filter((x) => x.id !== s.id) })}
                     className="carte-douce grid size-12 shrink-0 place-items-center text-destructive"
                   >
                     <Trash2 className="size-4" aria-hidden />
@@ -262,42 +311,60 @@ function Saisie() {
           )}
         </Carte>
 
-        <Carte numero={4} titre="Heure de lever">
-          <ChampHeure label="Lever" valeur={nuit.heureLever} onChange={(v) => maj({ heureLever: v })} />
-        </Carte>
-
         <Carte
-          numero={5}
-          titre="Sieste"
+          numero={6}
+          titre="Somnolence"
           action={
-            <Switch
-              checked={!!nuit.sieste}
-              aria-label="J'ai fait une sieste"
-              onCheckedChange={(actif) =>
-                maj({ sieste: actif ? { id: nouvelId(), debut: "14:00", fin: "14:30" } : null })
-              }
-            />
+            <button
+              type="button"
+              onClick={() => maj({ somnolences: [...nuit.somnolences, "15:00"] })}
+              className="flex min-h-10 items-center gap-1.5 rounded-full bg-secondary px-3 text-sm font-semibold text-primary"
+            >
+              <Plus className="size-4" aria-hidden />
+              Ajouter
+            </button>
           }
         >
-          {nuit.sieste ? (
-            <div className="flex gap-2">
-              <ChampHeure
-                label="Début"
-                valeur={nuit.sieste.debut}
-                onChange={(v) => maj({ sieste: { ...nuit.sieste!, debut: v } })}
-              />
-              <ChampHeure
-                label="Fin"
-                valeur={nuit.sieste.fin}
-                onChange={(v) => maj({ sieste: { ...nuit.sieste!, fin: v } })}
-              />
-            </div>
+          {nuit.somnolences.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Aucune somnolence dans la journée.</p>
           ) : (
-            <p className="text-sm text-muted-foreground">Pas de sieste.</p>
+            <ul className="space-y-2">
+              {nuit.somnolences.map((h, i) => (
+                <li key={i} className="flex items-center gap-2">
+                  <SelecteurHeure
+                    label="Moment"
+                    valeur={h}
+                    onChange={(v) =>
+                      maj({ somnolences: nuit.somnolences.map((x, j) => (j === i ? v : x)) })
+                    }
+                  />
+                  <button
+                    type="button"
+                    aria-label="Supprimer cette somnolence"
+                    onClick={() => maj({ somnolences: nuit.somnolences.filter((_, j) => j !== i) })}
+                    className="carte-douce grid size-12 shrink-0 place-items-center text-destructive"
+                  >
+                    <Trash2 className="size-4" aria-hidden />
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </Carte>
 
-        <Carte numero={6} titre="Évaluation">
+        <Carte numero={7} titre="Long réveil">
+          <CurseurDuree
+            label="Éveillé avant le lever"
+            valeur={nuit.longReveil}
+            onChange={(v) => maj({ longReveil: v })}
+          />
+        </Carte>
+
+        <Carte
+          numero={8}
+          titre="Évaluation"
+          extra={<Etoiles valeur={moyenne} label={`Moyenne : ${moyenne.toFixed(1)} sur 5`} />}
+        >
           <div className="space-y-5">
             <SelecteurNote
               titre="Qualité du sommeil"
@@ -317,11 +384,42 @@ function Saisie() {
           </div>
         </Carte>
 
-        <Carte numero={7} titre="Traitement et remarques">
+        <Carte numero={9} titre="Traitement">
+          <Input
+            value={nuit.traitement}
+            onChange={(e) => maj({ traitement: e.target.value })}
+            placeholder="Nom du traitement, dose…"
+            className="h-12 rounded-2xl"
+          />
+          {traitements.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {traitements.map((t) => (
+                <span
+                  key={t}
+                  className="flex items-center gap-1 rounded-full bg-secondary py-1 pl-3 pr-1 text-sm"
+                >
+                  <button type="button" onClick={() => maj({ traitement: t })} className="font-medium">
+                    {t}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Oublier ${t}`}
+                    onClick={() => oublierTraitement(t)}
+                    className="grid size-6 place-items-center rounded-full text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="size-3.5" aria-hidden />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </Carte>
+
+        <Carte numero={10} titre="Remarques">
           <Textarea
             value={nuit.commentaire}
             onChange={(e) => maj({ commentaire: e.target.value })}
-            placeholder="Traitement, événement particulier…"
+            placeholder="Événement particulier…"
             className="min-h-24 rounded-2xl"
           />
         </Carte>
@@ -332,9 +430,8 @@ function Saisie() {
           <button
             type="button"
             onClick={() => {
-              supprimerNuit(existante.id);
-              toast("Nuit supprimée");
-              navigate({ to: "/historique" });
+              supprimerAvecAnnulation(existante);
+              navigate({ to: "/" });
             }}
             className="carte grid min-h-14 w-14 place-items-center text-destructive"
             aria-label="Supprimer cette nuit"

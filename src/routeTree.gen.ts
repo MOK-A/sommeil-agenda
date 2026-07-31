@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as HistoriqueRouteImport } from './routes/historique'
 import { Route as ParametresRouteImport } from './routes/parametres'
 import { Route as SaisieRouteImport } from './routes/saisie'
 import { Route as StatistiquesRouteImport } from './routes/statistiques'
@@ -18,11 +17,6 @@ import { Route as StatistiquesRouteImport } from './routes/statistiques'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HistoriqueRoute = HistoriqueRouteImport.update({
-  id: '/historique',
-  path: '/historique',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ParametresRoute = ParametresRouteImport.update({
@@ -43,14 +37,12 @@ const StatistiquesRoute = StatistiquesRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/historique': typeof HistoriqueRoute
   '/parametres': typeof ParametresRoute
   '/saisie': typeof SaisieRoute
   '/statistiques': typeof StatistiquesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/historique': typeof HistoriqueRoute
   '/parametres': typeof ParametresRoute
   '/saisie': typeof SaisieRoute
   '/statistiques': typeof StatistiquesRoute
@@ -58,28 +50,20 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/historique': typeof HistoriqueRoute
   '/parametres': typeof ParametresRoute
   '/saisie': typeof SaisieRoute
   '/statistiques': typeof StatistiquesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/historique' | '/parametres' | '/saisie' | '/statistiques'
+  fullPaths: '/' | '/parametres' | '/saisie' | '/statistiques'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/historique' | '/parametres' | '/saisie' | '/statistiques'
-  id:
-    | '__root__'
-    | '/'
-    | '/historique'
-    | '/parametres'
-    | '/saisie'
-    | '/statistiques'
+  to: '/' | '/parametres' | '/saisie' | '/statistiques'
+  id: '__root__' | '/' | '/parametres' | '/saisie' | '/statistiques'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  HistoriqueRoute: typeof HistoriqueRoute
   ParametresRoute: typeof ParametresRoute
   SaisieRoute: typeof SaisieRoute
   StatistiquesRoute: typeof StatistiquesRoute
@@ -92,13 +76,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/historique': {
-      id: '/historique'
-      path: '/historique'
-      fullPath: '/historique'
-      preLoaderRoute: typeof HistoriqueRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/parametres': {
@@ -127,7 +104,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  HistoriqueRoute: HistoriqueRoute,
   ParametresRoute: ParametresRoute,
   SaisieRoute: SaisieRoute,
   StatistiquesRoute: StatistiquesRoute,

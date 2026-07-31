@@ -1,7 +1,8 @@
 import { cn } from "@/lib/utils";
 import { NOTES, type Note } from "@/lib/sleep/types";
+import { Etoiles, ETOILES } from "@/components/etoiles";
 
-/** Sélecteur d'appréciation TB / B / Moy / M / TM en un seul geste. */
+/** Sélecteur d'appréciation, de très mauvais (gauche) à très bon (droite). */
 export function SelecteurNote({
   titre,
   valeur,
@@ -11,11 +12,15 @@ export function SelecteurNote({
   valeur: Note;
   onChange: (n: Note) => void;
 }) {
+  const ordre = NOTES.slice().reverse();
   return (
     <fieldset>
-      <legend className="mb-2 text-sm font-medium text-muted-foreground">{titre}</legend>
+      <legend className="mb-2 flex w-full items-center justify-between gap-2 text-sm font-medium text-muted-foreground">
+        <span>{titre}</span>
+        <Etoiles valeur={ETOILES[valeur]} label={`${ETOILES[valeur]} sur 5`} />
+      </legend>
       <div className="grid grid-cols-5 gap-1.5">
-        {NOTES.map((n) => {
+        {ordre.map((n) => {
           const actif = n.value === valeur;
           return (
             <button
