@@ -10,33 +10,79 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as HistoriqueRouteImport } from './routes/historique'
+import { Route as ParametresRouteImport } from './routes/parametres'
+import { Route as SaisieRouteImport } from './routes/saisie'
+import { Route as StatistiquesRouteImport } from './routes/statistiques'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HistoriqueRoute = HistoriqueRouteImport.update({
+  id: '/historique',
+  path: '/historique',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ParametresRoute = ParametresRouteImport.update({
+  id: '/parametres',
+  path: '/parametres',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SaisieRoute = SaisieRouteImport.update({
+  id: '/saisie',
+  path: '/saisie',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatistiquesRoute = StatistiquesRouteImport.update({
+  id: '/statistiques',
+  path: '/statistiques',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/historique': typeof HistoriqueRoute
+  '/parametres': typeof ParametresRoute
+  '/saisie': typeof SaisieRoute
+  '/statistiques': typeof StatistiquesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/historique': typeof HistoriqueRoute
+  '/parametres': typeof ParametresRoute
+  '/saisie': typeof SaisieRoute
+  '/statistiques': typeof StatistiquesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/historique': typeof HistoriqueRoute
+  '/parametres': typeof ParametresRoute
+  '/saisie': typeof SaisieRoute
+  '/statistiques': typeof StatistiquesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/historique' | '/parametres' | '/saisie' | '/statistiques'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/historique' | '/parametres' | '/saisie' | '/statistiques'
+  id:
+    | '__root__'
+    | '/'
+    | '/historique'
+    | '/parametres'
+    | '/saisie'
+    | '/statistiques'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  HistoriqueRoute: typeof HistoriqueRoute
+  ParametresRoute: typeof ParametresRoute
+  SaisieRoute: typeof SaisieRoute
+  StatistiquesRoute: typeof StatistiquesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +94,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/historique': {
+      id: '/historique'
+      path: '/historique'
+      fullPath: '/historique'
+      preLoaderRoute: typeof HistoriqueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/parametres': {
+      id: '/parametres'
+      path: '/parametres'
+      fullPath: '/parametres'
+      preLoaderRoute: typeof ParametresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/saisie': {
+      id: '/saisie'
+      path: '/saisie'
+      fullPath: '/saisie'
+      preLoaderRoute: typeof SaisieRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/statistiques': {
+      id: '/statistiques'
+      path: '/statistiques'
+      fullPath: '/statistiques'
+      preLoaderRoute: typeof StatistiquesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  HistoriqueRoute: HistoriqueRoute,
+  ParametresRoute: ParametresRoute,
+  SaisieRoute: SaisieRoute,
+  StatistiquesRoute: StatistiquesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
