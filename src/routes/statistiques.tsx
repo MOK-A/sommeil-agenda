@@ -2,8 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import {
   Area,
-  AreaChart,
+  ComposedChart,
   CartesianGrid,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -12,7 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useNuits } from "@/lib/sleep/store";
 import { calculerStatistiques } from "@/lib/sleep/stats";
-import { dateCourte, dureeHumaine } from "@/lib/sleep/time";
+import { dateCourte, depuisOrigine, dureeHumaine, fromMinutes } from "@/lib/sleep/time";
 
 export const Route = createFileRoute("/statistiques")({
   head: () => ({
@@ -55,7 +56,18 @@ function Statistiques() {
   const donnees = stats.serie
     .slice()
     .reverse()
-    .map((p) => ({ jour: dateCourte(p.date), heures: Math.round((p.sommeil / 60) * 10) / 10 }));
+    .map((p) => {
+      const coucher = depuisOrigine(p.coucher) / 60;
+      const lever = depuisOrigine(p.lever) / 60;
+      return {
+        jour: dateCourte(p.date),
+        coucher,
+        lever: lever < coucher ? lever + 24 : lever,
+        plage: [coucher, lever < coucher ? lever + 24 : lever] as [number, number],
+      };
+    });
+
+  const etiquetteHeure = (v: number) => fromMinutes(Math.round((v * 60 + 20 * 60) % 1440));
 
   return (
     <main className="mx-auto max-w-2xl px-4 pt-8">
@@ -105,15 +117,15 @@ function Statistiques() {
 
           <section className="carte mt-4 p-4">
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Durée de sommeil (h)
+              Heures de coucher et de lever
             </h2>
             <div className="h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={donnees} margin={{ left: -20, right: 8, top: 8 }}>
+                <ComposedChart data={donnees} margin={{ left: -10, right: 8, top: 8 }}>
                   <defs>
                     <linearGradient id="degradeSommeil" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
+                      <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.4} />
+                      <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0.1} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
@@ -128,7 +140,11 @@ function Statistiques() {
                     tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }}
                     tickLine={false}
                     axisLine={false}
-                    width={40}
+                    width={52}
+                    domain={[0, 24]}
+                    ticks={[0, 4, 8, 12, 16, 20, 24]}
+                    tickFormatter={etiquetteHeure}
+                    reversed
                   />
                   <Tooltip
                     contentStyle={{
@@ -138,16 +154,34 @@ function Statistiques() {
                       color: "var(--color-foreground)",
                       fontSize: 12,
                     }}
-                    formatter={(v) => [`${v} h`, "Sommeil"]}
+                    formatter={(v, name) =>
+                      Array.isArray(v)
+                        ? [`${etiquetteHeure(v[0] as number)} → ${etiquetteHeure(v[1] as number)}`, "Nuit"]
+                        : [etiquetteHeure(v as number), name === "coucher" ? "Coucher" : "Lever"]
+                    }
                   />
                   <Area
                     type="monotone"
-                    dataKey="heures"
+                    dataKey="plage"
+                    stroke="none"
+                    fill="url(#degradeSommeil)"
+                    activeDot={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="coucher"
                     stroke="var(--color-primary)"
                     strokeWidth={2}
-                    fill="url(#degradeSommeil)"
+                    dot={false}
                   />
-                </AreaChart>
+                  <Line
+                    type="monotone"
+                    dataKey="lever"
+                    stroke="var(--color-jour)"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
           </section>
