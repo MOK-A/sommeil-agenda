@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useRef } from "react";
-import { Download, FileJson, FileSpreadsheet, FileText, Image, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -12,13 +12,7 @@ import {
   useNuits,
   useReglages,
 } from "@/lib/sleep/store";
-import {
-  exporterCsv,
-  exporterJson,
-  exporterPdf,
-  exporterPng,
-  lireSauvegarde,
-} from "@/lib/sleep/export";
+import { lireSauvegarde } from "@/lib/sleep/export";
 import type { Reglages } from "@/lib/sleep/types";
 
 export const Route = createFileRoute("/parametres")({
@@ -71,37 +65,9 @@ function Champ({
 
 function Parametres() {
   const reglages = useReglages();
-  const nuits = useNuits();
   const fichier = useRef<HTMLInputElement>(null);
 
   const maj = (patch: Partial<Reglages>) => enregistrerReglages({ ...reglages, ...patch });
-
-  const exports = [
-    {
-      icone: FileText,
-      titre: "PDF officiel",
-      detail: "Agenda identique au document papier",
-      action: () => exporterPdf(nuits, reglages),
-    },
-    {
-      icone: Image,
-      titre: "Image PNG",
-      detail: "Le graphique seul, à partager",
-      action: () => exporterPng(nuits),
-    },
-    {
-      icone: FileSpreadsheet,
-      titre: "Tableur CSV",
-      detail: "Une ligne par nuit",
-      action: () => exporterCsv(nuits),
-    },
-    {
-      icone: FileJson,
-      titre: "Sauvegarde JSON",
-      detail: "Toutes vos données",
-      action: () => exporterJson(nuits, reglages),
-    },
-  ];
 
   return (
     <main className="mx-auto max-w-2xl px-4 pt-8">
@@ -177,36 +143,6 @@ function Parametres() {
               onChange={(e) => maj({ rappelMatin: e.target.value || null })}
             />
           </div>
-        </Section>
-
-        <Section titre="Exporter">
-          <ul className="space-y-2">
-            {exports.map((e) => (
-              <li key={e.titre}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!nuits.length) {
-                      toast("Aucune nuit à exporter");
-                      return;
-                    }
-                    e.action();
-                    toast.success(`${e.titre} généré`);
-                  }}
-                  className="carte-douce flex w-full items-center gap-3 p-4 text-left"
-                >
-                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-secondary text-primary">
-                    <e.icone className="size-5" aria-hidden />
-                  </span>
-                  <span className="flex-1">
-                    <span className="block font-semibold">{e.titre}</span>
-                    <span className="block text-xs text-muted-foreground">{e.detail}</span>
-                  </span>
-                  <Download className="size-4 text-muted-foreground" aria-hidden />
-                </button>
-              </li>
-            ))}
-          </ul>
         </Section>
 
         <Section titre="Restaurer une sauvegarde">
