@@ -10,6 +10,7 @@ import { CurseurDuree } from "@/components/curseur-duree";
 import { Etoiles, ETOILES } from "@/components/etoiles";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import {
   chargerNuits,
   enregistrerNuit,
