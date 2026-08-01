@@ -5,13 +5,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import {
-  chargerNuits,
-  enregistrerReglages,
-  remplacerNuits,
-  useNuits,
-  useReglages,
-} from "@/lib/sleep/store";
+import { chargerNuits, enregistrerReglages, remplacerNuits, useReglages } from "@/lib/sleep/store";
 import { lireSauvegarde } from "@/lib/sleep/export";
 import type { Reglages } from "@/lib/sleep/types";
 
