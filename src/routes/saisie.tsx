@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
-import { CalendarDays, Check, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { ApercuGrille } from "@/components/apercu-grille";
@@ -13,13 +13,17 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   chargerNuits,
   enregistrerNuit,
+  memoriserRemarque,
   memoriserTraitement,
   nouvelId,
+  nuitParDate,
+  oublierRemarque,
   oublierTraitement,
+  useRemarques,
   useTraitements,
 } from "@/lib/sleep/store";
 import { supprimerAvecAnnulation } from "@/lib/sleep/suppression";
-import { dateISO, fromMinutes, libelleNuit, toMinutes } from "@/lib/sleep/time";
+import { ajouterJours, dateISO, fromMinutes, libelleNuit, toMinutes } from "@/lib/sleep/time";
 import type { Nuit } from "@/lib/sleep/types";
 
 const recherche = z.object({
@@ -104,61 +108,100 @@ function Saisie() {
   const { id, date } = Route.useSearch();
   const navigate = useNavigate();
   const traitements = useTraitements();
+  const remarques = useRemarques();
   const dateRef = useRef<HTMLInputElement>(null);
   const existante = useMemo(() => (id ? chargerNuits().find((n) => n.id === id) : undefined), [id]);
   const [nuit, setNuit] = useState<Nuit>(
     () => existante ?? nuitVide(date ?? dateISO(new Date(Date.now() - 86400000))),
   );
+  const [compact, setCompact] = useState(false);
+
+  useEffect(() => {
+    const auScroll = () => setCompact(window.scrollY > 40);
+    auScroll();
+    window.addEventListener("scroll", auScroll, { passive: true });
+    return () => window.removeEventListener("scroll", auScroll);
+  }, []);
 
   const maj = (patch: Partial<Nuit>) => setNuit((n) => ({ ...n, ...patch }));
+
+  /** Change de date : reprend la nuit déjà enregistrée s'il y en a une (pas de doublon). */
+  const changerDate = (nouvelleDate: string) => {
+    if (!nouvelleDate) return;
+    const deja = nuitParDate(nouvelleDate);
+    setNuit(deja && deja.id !== nuit.id ? deja : { ...nuit, date: nouvelleDate });
+  };
 
   const moyenne =
     (ETOILES[nuit.qualiteSommeil] + ETOILES[nuit.qualiteReveil] + ETOILES[nuit.formeJournee]) / 3;
 
   const enregistrer = () => {
     if (nuit.traitement.trim()) memoriserTraitement(nuit.traitement.trim());
+    if (nuit.commentaire.trim()) memoriserRemarque(nuit.commentaire.trim());
     enregistrerNuit(nuit);
     toast.success("Nuit enregistrée");
     navigate({ to: "/" });
   };
 
   return (
-    <main className="mx-auto max-w-2xl px-4 pt-6">
-      <header className="mb-5 flex items-center justify-between gap-3">
-        <button
-          type="button"
-          aria-label="Changer la date"
-          onClick={() => dateRef.current?.showPicker?.() ?? dateRef.current?.focus()}
-          className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-sm"
-        >
-          <CalendarDays className="size-6" aria-hidden />
-        </button>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-2xl font-extrabold tracking-tight">{libelleNuit(nuit.date)}</h1>
+    <main className="mx-auto max-w-2xl px-4 pt-4">
+      <div className="sticky top-0 z-40 -mx-4 bg-background/95 px-4 pt-2 pb-3 backdrop-blur-xl">
+        <div className="mb-2 flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Jour précédent"
+            onClick={() => changerDate(ajouterJours(nuit.date, -1))}
+            className="carte-douce grid size-11 shrink-0 place-items-center text-primary"
+          >
+            <ChevronLeft className="size-6" aria-hidden />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => dateRef.current?.showPicker?.() ?? dateRef.current?.focus()}
+            className={cn(
+              "flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-3 font-bold text-primary-foreground shadow-sm transition-all",
+              compact ? "min-h-10 text-sm" : "min-h-14 text-lg",
+            )}
+          >
+            <CalendarDays className={compact ? "size-4 shrink-0" : "size-5 shrink-0"} aria-hidden />
+            <span className="truncate">{libelleNuit(nuit.date)}</span>
+          </button>
           <input
             ref={dateRef}
             type="date"
             value={nuit.date}
-            onChange={(e) => maj({ date: e.target.value })}
-            className="mt-0.5 bg-transparent text-sm text-muted-foreground outline-none"
+            onChange={(e) => changerDate(e.target.value)}
+            className="sr-only"
             aria-label="Date de la nuit"
           />
-        </div>
-        <button
-          type="button"
-          onClick={() => navigate({ to: "/" })}
-          aria-label="Fermer"
-          className="carte-douce grid size-11 shrink-0 place-items-center text-muted-foreground"
-        >
-          <X className="size-6" aria-hidden />
-        </button>
-      </header>
 
-      <div className="carte mb-5 p-4">
-        <ApercuGrille nuits={[nuit]} hauteurLigne={34} />
-        <p className="mt-1 text-xs text-muted-foreground">
-          Aperçu automatique — identique au document PDF remis au médecin.
-        </p>
+          <button
+            type="button"
+            aria-label="Jour suivant"
+            onClick={() => changerDate(ajouterJours(nuit.date, 1))}
+            className="carte-douce grid size-11 shrink-0 place-items-center text-primary"
+          >
+            <ChevronRight className="size-6" aria-hidden />
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/" })}
+            aria-label="Fermer"
+            className="carte-douce grid size-11 shrink-0 place-items-center text-muted-foreground"
+          >
+            <X className="size-6" aria-hidden />
+          </button>
+        </div>
+
+        <div className="carte p-3">
+          <ApercuGrille nuits={[nuit]} hauteurLigne={compact ? 28 : 34} origineHeure={18} />
+          {!compact && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Aperçu automatique — identique au document PDF remis au médecin.
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -253,12 +296,20 @@ function Saisie() {
           )}
         </Carte>
 
-        <Carte numero={4} titre="Heure de lever">
+        <Carte numero={4} titre="Long réveil">
+          <CurseurDuree
+            label="Éveillé avant le lever"
+            valeur={nuit.longReveil}
+            onChange={(v) => maj({ longReveil: v })}
+          />
+        </Carte>
+
+        <Carte numero={5} titre="Heure de lever">
           <SelecteurHeure label="Lever" valeur={nuit.heureLever} onChange={(v) => maj({ heureLever: v })} />
         </Carte>
 
         <Carte
-          numero={5}
+          numero={6}
           titre="Siestes"
           action={
             <button
@@ -312,7 +363,7 @@ function Saisie() {
         </Carte>
 
         <Carte
-          numero={6}
+          numero={7}
           titre="Somnolence"
           action={
             <button
@@ -350,14 +401,6 @@ function Saisie() {
               ))}
             </ul>
           )}
-        </Carte>
-
-        <Carte numero={7} titre="Long réveil">
-          <CurseurDuree
-            label="Éveillé avant le lever"
-            valeur={nuit.longReveil}
-            onChange={(v) => maj({ longReveil: v })}
-          />
         </Carte>
 
         <Carte
@@ -422,10 +465,36 @@ function Saisie() {
             placeholder="Événement particulier…"
             className="min-h-24 rounded-2xl"
           />
+          {remarques.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {remarques.map((t) => (
+                <span
+                  key={t}
+                  className="flex max-w-full items-center gap-1 rounded-full bg-secondary py-1 pl-3 pr-1 text-sm"
+                >
+                  <button
+                    type="button"
+                    onClick={() => maj({ commentaire: t })}
+                    className="max-w-[14rem] truncate font-medium"
+                  >
+                    {t}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Oublier ${t}`}
+                    onClick={() => oublierRemarque(t)}
+                    className="grid size-6 shrink-0 place-items-center rounded-full text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="size-3.5" aria-hidden />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </Carte>
       </div>
 
-      <div className="sticky bottom-24 z-30 mt-6 flex gap-2">
+      <div className="mt-6 mb-4 flex gap-2">
         {existante && (
           <button
             type="button"
