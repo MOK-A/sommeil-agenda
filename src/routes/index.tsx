@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Moon, Plus } from "lucide-react";
 import { HistoriqueNuits } from "@/components/historique-nuits";
-import { useNuits, useReglages } from "@/lib/sleep/store";
+import { useNuits } from "@/lib/sleep/store";
 import { dateISO } from "@/lib/sleep/time";
 
 export const Route = createFileRoute("/")({
@@ -25,16 +25,13 @@ export const Route = createFileRoute("/")({
 
 function Accueil() {
   const nuits = useNuits();
-  const reglages = useReglages();
   const hier = dateISO(new Date(Date.now() - 86400000));
-  const dejaRempli = nuits.some((n) => n.date === hier);
+  const nuitHier = nuits.find((n) => n.date === hier);
+  const dejaRempli = !!nuitHier;
 
   return (
     <main className="mx-auto max-w-2xl px-4 pt-8">
       <header className="mb-6">
-        <p className="text-sm text-muted-foreground">
-          {reglages.prenom ? `Bonjour ${reglages.prenom}` : "Bonjour"}
-        </p>
         <h1 className="text-3xl font-extrabold tracking-tight">Journal de sommeil</h1>
       </header>
 
@@ -54,7 +51,7 @@ function Accueil() {
         </div>
         <Link
           to="/saisie"
-          search={{ date: hier, id: undefined }}
+          search={{ date: hier, id: nuitHier?.id }}
           className="mt-5 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-base font-semibold text-primary-foreground transition-transform active:scale-[0.985]"
         >
           <Plus className="size-5" aria-hidden />

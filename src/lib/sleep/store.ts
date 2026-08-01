@@ -9,6 +9,7 @@ import { REGLAGES_DEFAUT } from "./types";
 const CLE_NUITS = "journal-sommeil.nuits.v1";
 const CLE_REGLAGES = "journal-sommeil.reglages.v1";
 const CLE_TRAITEMENTS = "journal-sommeil.traitements.v1";
+const CLE_REMARQUES = "journal-sommeil.remarques.v1";
 
 type Ecouteur = () => void;
 const ecouteurs = new Set<Ecouteur>();
@@ -55,9 +56,15 @@ export function chargerNuits(): Nuit[] {
 }
 
 export function enregistrerNuit(nuit: Nuit) {
-  const nuits = lire<Nuit[]>(CLE_NUITS, []).filter((n) => n.id !== nuit.id);
+  // Une seule nuit par date : toute nuit existante à la même date est remplacée.
+  const nuits = lire<Nuit[]>(CLE_NUITS, []).filter((n) => n.id !== nuit.id && n.date !== nuit.date);
   nuits.push({ ...nuit, majLe: new Date().toISOString() });
   ecrire(CLE_NUITS, nuits);
+}
+
+/** Nuit déjà enregistrée à cette date, le cas échéant. */
+export function nuitParDate(date: string): Nuit | undefined {
+  return chargerNuits().find((n) => n.date === date);
 }
 
 export function supprimerNuit(id: string) {
@@ -130,5 +137,30 @@ export function oublierTraitement(valeur: string) {
 
 export function useTraitements() {
   const [liste] = useSynchro(chargerTraitements);
+  return liste;
+}
+
+/* ---- Historique des remarques saisies ---- */
+
+export function chargerRemarques(): string[] {
+  return lire<string[]>(CLE_REMARQUES, []);
+}
+
+export function memoriserRemarque(valeur: string) {
+  const v = valeur.trim();
+  if (!v) return;
+  const liste = chargerRemarques().filter((t) => t.toLowerCase() !== v.toLowerCase());
+  ecrire(CLE_REMARQUES, [v, ...liste].slice(0, 12));
+}
+
+export function oublierRemarque(valeur: string) {
+  ecrire(
+    CLE_REMARQUES,
+    chargerRemarques().filter((t) => t !== valeur),
+  );
+}
+
+export function useRemarques() {
+  const [liste] = useSynchro(chargerRemarques);
   return liste;
 }

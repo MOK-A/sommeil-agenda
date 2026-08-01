@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { Download, FileJson, FileSpreadsheet, FileText, Image } from "lucide-react";
+import { toast } from "sonner";
 import {
   Area,
   ComposedChart,
@@ -11,7 +13,8 @@ import {
   YAxis,
 } from "recharts";
 import { cn } from "@/lib/utils";
-import { useNuits } from "@/lib/sleep/store";
+import { useNuits, useReglages } from "@/lib/sleep/store";
+import { exporterCsv, exporterJson, exporterPdf, exporterPng } from "@/lib/sleep/export";
 import { calculerStatistiques } from "@/lib/sleep/stats";
 import { dateCourte, dureeHumaine, fromMinutes } from "@/lib/sleep/time";
 
@@ -49,6 +52,7 @@ function Bloc({ titre, valeur, detail }: { titre: string; valeur: string; detail
 
 function Statistiques() {
   const nuits = useNuits();
+  const reglages = useReglages();
   const [periode, setPeriode] = useState(30);
   const selection = useMemo(() => nuits.slice(0, periode), [nuits, periode]);
   const stats = useMemo(() => calculerStatistiques(selection), [selection]);
@@ -68,6 +72,23 @@ function Statistiques() {
     });
 
   const etiquetteHeure = (v: number) => fromMinutes(Math.round((v * 60 + 20 * 60) % 1440));
+
+  const exports = [
+    {
+      icone: FileText,
+      titre: "PDF officiel",
+      detail: "Agenda identique au document papier",
+      action: () => exporterPdf(nuits, reglages),
+    },
+    { icone: Image, titre: "Image PNG", detail: "Le graphique seul, à partager", action: () => exporterPng(nuits) },
+    { icone: FileSpreadsheet, titre: "Tableur CSV", detail: "Une ligne par nuit", action: () => exporterCsv(nuits) },
+    {
+      icone: FileJson,
+      titre: "Sauvegarde JSON",
+      detail: "Toutes vos données",
+      action: () => exporterJson(nuits, reglages),
+    },
+  ];
 
   return (
     <main className="mx-auto max-w-2xl px-4 pt-8">
@@ -144,7 +165,6 @@ function Statistiques() {
                     domain={[0, 24]}
                     ticks={[0, 4, 8, 12, 16, 20, 24]}
                     tickFormatter={etiquetteHeure}
-                    reversed
                   />
                   <Tooltip
                     contentStyle={{
@@ -194,6 +214,39 @@ function Statistiques() {
           )}
         </>
       )}
+
+      <section className="carte mt-4 p-4">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Exporter
+        </h2>
+        <ul className="space-y-2">
+          {exports.map((e) => (
+            <li key={e.titre}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!nuits.length) {
+                    toast("Aucune nuit à exporter");
+                    return;
+                  }
+                  e.action();
+                  toast.success(`${e.titre} généré`);
+                }}
+                className="carte-douce flex w-full items-center gap-3 p-4 text-left"
+              >
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-secondary text-primary">
+                  <e.icone className="size-5" aria-hidden />
+                </span>
+                <span className="flex-1">
+                  <span className="block font-semibold">{e.titre}</span>
+                  <span className="block text-xs text-muted-foreground">{e.detail}</span>
+                </span>
+                <Download className="size-4 text-muted-foreground" aria-hidden />
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
     </main>
   );
 }
