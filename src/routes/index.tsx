@@ -25,16 +25,12 @@ export const Route = createFileRoute("/")({
 
 function Accueil() {
   const nuits = useNuits();
-  const reglages = useReglages();
   const hier = dateISO(new Date(Date.now() - 86400000));
   const dejaRempli = nuits.some((n) => n.date === hier);
 
   return (
     <main className="mx-auto max-w-2xl px-4 pt-8">
       <header className="mb-6">
-        <p className="text-sm text-muted-foreground">
-          {reglages.prenom ? `Bonjour ${reglages.prenom}` : "Bonjour"}
-        </p>
         <h1 className="text-3xl font-extrabold tracking-tight">Journal de sommeil</h1>
       </header>
 
