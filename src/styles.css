@@ -89,6 +89,8 @@
   --bien: oklch(0.7 0.13 160);
   --moyen: oklch(0.79 0.14 80);
   --mauvais: oklch(0.63 0.17 25);
+  --tres-bien: oklch(0.58 0.16 155);
+  --tres-mauvais: oklch(0.48 0.19 27);
   --nuit: oklch(0.52 0.115 248);
   --jour: oklch(0.83 0.1 85);
   --ombre-carte: 0 1px 2px oklch(0.4 0.05 250 / 0.06), 0 12px 32px oklch(0.4 0.05 250 / 0.08);
@@ -130,6 +132,8 @@
   --bien: oklch(0.72 0.13 162);
   --moyen: oklch(0.8 0.13 82);
   --mauvais: oklch(0.68 0.16 26);
+  --tres-bien: oklch(0.6 0.16 158);
+  --tres-mauvais: oklch(0.52 0.19 27);
   --nuit: oklch(0.72 0.11 245);
   --jour: oklch(0.82 0.1 85);
   --ombre-carte: 0 1px 2px oklch(0 0 0 / 0.4), 0 12px 32px oklch(0 0 0 / 0.35);
@@ -165,6 +169,8 @@
   --color-bien: var(--bien);
   --color-moyen: var(--moyen);
   --color-mauvais: var(--mauvais);
+  --color-tres-bien: var(--tres-bien);
+  --color-tres-mauvais: var(--tres-mauvais);
   --color-nuit: var(--nuit);
   --color-jour: var(--jour);
 }

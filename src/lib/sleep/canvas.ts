@@ -14,6 +14,8 @@ export interface OptionsCanvas {
   couleurBarre?: string;
   fond?: string;
   avecDates?: boolean;
+  /** Heure de début de la grille affichée (20 = document officiel). */
+  origineHeure?: number;
 }
 
 export function dessinerAgenda(
@@ -29,7 +31,11 @@ export function dessinerAgenda(
     couleurBarre = "#5b6cff",
     fond = "#ffffff",
     avecDates = true,
+    origineHeure = 20,
   } = options;
+
+  /** Décalage (minutes) entre l'origine du moteur (20h) et l'origine affichée. */
+  const decalage = (((20 - origineHeure) % 24) + 24) % 24 * 60;
 
   const dpr = typeof window === "undefined" ? 1 : window.devicePixelRatio || 1;
   const margeGauche = avecDates ? 74 : 8;
@@ -50,7 +56,8 @@ export function dessinerAgenda(
 
   const x0 = margeGauche;
   const lGrille = largeur - margeGauche - margeDroite;
-  const posX = (min: number) => x0 + (min / LARGEUR) * lGrille;
+  const dansGrille = (min: number) => Math.max(0, Math.min(LARGEUR, min + decalage));
+  const posX = (min: number) => x0 + (dansGrille(min) / LARGEUR) * lGrille;
 
   // Graduations
   ctx.font = "10px ui-sans-serif, system-ui, sans-serif";
@@ -59,7 +66,7 @@ export function dessinerAgenda(
   for (let h = 0; h <= 24; h += 2) {
     const x = x0 + (h / 24) * lGrille;
     ctx.globalAlpha = 0.6;
-    ctx.fillText(String((20 + h) % 24), Math.min(largeur - 8, Math.max(10, x)), 12);
+    ctx.fillText(String((origineHeure + h) % 24), Math.min(largeur - 8, Math.max(10, x)), 12);
     ctx.globalAlpha = 1;
   }
 
@@ -128,6 +135,7 @@ export function dessinerAgenda(
 
     ctx.font = "bold 10px ui-sans-serif, system-ui, sans-serif";
     for (const s of rendu.somnolences) {
+      if (s + decalage > LARGEUR) continue;
       ctx.fillStyle = fond;
       ctx.fillRect(posX(s) - 4, y + 3, 8, h - 6);
       ctx.fillStyle = couleurTexte;
