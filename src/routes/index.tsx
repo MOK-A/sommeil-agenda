@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Moon, Plus } from "lucide-react";
 import { HistoriqueNuits } from "@/components/historique-nuits";
-import { useNuits, useReglages } from "@/lib/sleep/store";
+import { useNuits } from "@/lib/sleep/store";
 import { dateISO } from "@/lib/sleep/time";
 
 export const Route = createFileRoute("/")({

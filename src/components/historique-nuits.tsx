@@ -6,15 +6,18 @@ import { ApercuGrille } from "@/components/apercu-grille";
 import { Etoiles, ETOILES } from "@/components/etoiles";
 import { cn } from "@/lib/utils";
 import { useNuits, useReglages } from "@/lib/sleep/store";
-import { couleurNuit } from "@/lib/sleep/stats";
+import { niveauNuit } from "@/lib/sleep/stats";
 import { mesurer } from "@/lib/sleep/grid";
 import { dateISO, dureeHumaine, formatHeure, libelleNuit } from "@/lib/sleep/time";
 
-const COULEURS = {
-  bonne: "bg-bien",
-  moyenne: "bg-moyen",
-  mauvaise: "bg-mauvais",
-} as const;
+/** Cinq graduations, alignées sur la note en étoiles (1 = très mauvaise, 5 = très bonne). */
+const COULEURS: Record<1 | 2 | 3 | 4 | 5, string> = {
+  1: "bg-tres-mauvais",
+  2: "bg-mauvais",
+  3: "bg-moyen",
+  4: "bg-bien",
+  5: "bg-tres-bien",
+};
 
 const JOURS = ["L", "M", "M", "J", "V", "S", "D"];
 const MOIS_LONGS = [
@@ -104,7 +107,7 @@ export function HistoriqueNuits() {
                 const iso = dateISO(new Date(mois.annee, mois.mois, i + 1));
                 const nuit = parDate.get(iso);
                 const contenu = (
-                  <span className={cn("grid aspect-square w-full place-items-center rounded-xl text-sm font-medium", nuit ? `${COULEURS[couleurNuit(nuit)]} text-background` : "carte-douce text-muted-foreground")}>
+                  <span className={cn("grid aspect-square w-full place-items-center rounded-xl text-sm font-medium", nuit ? `${COULEURS[niveauNuit(nuit)]} text-background` : "carte-douce text-muted-foreground")}>
                     {i + 1}
                   </span>
                 );
@@ -115,10 +118,12 @@ export function HistoriqueNuits() {
                 );
               })}
             </div>
-            <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5"><span className="size-3 rounded-full bg-bien" aria-hidden /> Bonne nuit</span>
+            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5"><span className="size-3 rounded-full bg-tres-bien" aria-hidden /> Très bonne</span>
+              <span className="flex items-center gap-1.5"><span className="size-3 rounded-full bg-bien" aria-hidden /> Bonne</span>
               <span className="flex items-center gap-1.5"><span className="size-3 rounded-full bg-moyen" aria-hidden /> Moyenne</span>
               <span className="flex items-center gap-1.5"><span className="size-3 rounded-full bg-mauvais" aria-hidden /> Mauvaise</span>
+              <span className="flex items-center gap-1.5"><span className="size-3 rounded-full bg-tres-mauvais" aria-hidden /> Très mauvaise</span>
             </div>
           </div>
         </TabsContent>
