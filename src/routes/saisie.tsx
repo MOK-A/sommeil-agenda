@@ -7,7 +7,7 @@ import { ApercuGrille } from "@/components/apercu-grille";
 import { SelecteurNote } from "@/components/selecteur-note";
 import { SelecteurHeure } from "@/components/selecteur-heure";
 import { CurseurDuree } from "@/components/curseur-duree";
-import { Etoiles, ETOILES } from "@/components/etoiles";
+import { Etoiles, etoilesDe } from "@/components/etoiles";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -60,9 +60,9 @@ function nuitVide(date: string): Nuit {
     siestes: [],
     somnolences: [],
     longReveil: 0,
-    qualiteSommeil: "B",
-    qualiteReveil: "B",
-    formeJournee: "B",
+    qualiteSommeil: null,
+    qualiteReveil: null,
+    formeJournee: null,
     traitement: "",
     commentaire: "",
     majLe: "",
@@ -116,6 +116,10 @@ function Saisie() {
     () => existante ?? nuitVide(date ?? dateISO(new Date(Date.now() - 86400000))),
   );
   const [compact, setCompact] = useState(false);
+  /** La nuit affichée existe déjà dans le journal (coche verte). */
+  const [enregistree, setEnregistree] = useState(!!existante);
+  /** Des paramètres ont été touchés : l'aperçu repasse en couleur. */
+  const [modifiee, setModifiee] = useState(false);
 
   useEffect(() => {
     const auScroll = () => setCompact(window.scrollY > 40);
@@ -124,22 +128,32 @@ function Saisie() {
     return () => window.removeEventListener("scroll", auScroll);
   }, []);
 
-  const maj = (patch: Partial<Nuit>) => setNuit((n) => ({ ...n, ...patch }));
+  const maj = (patch: Partial<Nuit>) => {
+    setModifiee(true);
+    setNuit((n) => ({ ...n, ...patch }));
+  };
 
   /** Change de date : reprend la nuit déjà enregistrée s'il y en a une (pas de doublon). */
   const changerDate = (nouvelleDate: string) => {
     if (!nouvelleDate) return;
     const deja = nuitParDate(nouvelleDate);
-    setNuit(deja && deja.id !== nuit.id ? deja : { ...nuit, date: nouvelleDate });
+    const reprise = deja && deja.id !== nuit.id;
+    setNuit(reprise ? deja : { ...nuitVide(nouvelleDate), id: nuit.id });
+    setEnregistree(!!deja);
+    setModifiee(false);
   };
 
-  const moyenne =
-    (ETOILES[nuit.qualiteSommeil] + ETOILES[nuit.qualiteReveil] + ETOILES[nuit.formeJournee]) / 3;
+  const notes = [nuit.qualiteSommeil, nuit.qualiteReveil, nuit.formeJournee].filter(Boolean);
+  const moyenne = notes.length
+    ? notes.reduce((s, n) => s + etoilesDe(n), 0) / notes.length
+    : 0;
 
   const enregistrer = () => {
     if (nuit.traitement.trim()) memoriserTraitement(nuit.traitement.trim());
     if (nuit.commentaire.trim()) memoriserRemarque(nuit.commentaire.trim());
     enregistrerNuit(nuit);
+    setEnregistree(true);
+    setModifiee(false);
     toast.success("Nuit enregistrée");
     navigate({ to: "/" });
   };
