@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Moon, Sunrise } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApercuGrille } from "@/components/apercu-grille";
-import { Etoiles, ETOILES } from "@/components/etoiles";
+import { Etoiles, etoilesDe } from "@/components/etoiles";
 import { cn } from "@/lib/utils";
 import { useNuits, useReglages } from "@/lib/sleep/store";
 import { niveauNuit } from "@/lib/sleep/stats";
@@ -74,7 +74,10 @@ export function HistoriqueNuits() {
                             <span className="text-foreground/70">· {dureeHumaine(m.tempsSommeil)}</span>
                           </p>
                         </div>
-                        <Etoiles valeur={ETOILES[nuit.qualiteSommeil]} label={`Qualité du sommeil : ${ETOILES[nuit.qualiteSommeil]} sur 5`} />
+                        <Etoiles
+                          valeur={etoilesDe(nuit.qualiteSommeil)}
+                          label={`Qualité du sommeil : ${etoilesDe(nuit.qualiteSommeil)} sur 5`}
+                        />
                       </div>
                       <div className="mt-3">
                         <ApercuGrille nuits={[nuit]} hauteurLigne={26} />

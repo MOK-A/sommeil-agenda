@@ -3,10 +3,11 @@ import { cn } from "@/lib/utils";
 
 const HAUTEUR = 40;
 const VISIBLES = 3; // hauteur totale = 3 lignes, comme l'alarme iOS
+const REPETITIONS = 11; // la liste est répétée pour un défilement "infini"
 const HEURES = Array.from({ length: 24 }, (_, i) => i);
 const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5);
 
-/** Molette défilante à inertie native, calée sur la ligne centrale. */
+/** Molette défilante infinie à inertie native, calée sur la ligne centrale. */
 function Molette({
   valeurs,
   valeur,
@@ -21,15 +22,20 @@ function Molette({
   const ref = useRef<HTMLDivElement>(null);
   const minuteur = useRef<ReturnType<typeof setTimeout> | null>(null);
   const defile = useRef(false);
+  const taille = valeurs.length;
   const index = Math.max(0, valeurs.indexOf(valeur));
+  const liste = Array.from({ length: REPETITIONS * taille }, (_, i) => valeurs[i % taille]!);
+  const blocCentral = Math.floor(REPETITIONS / 2);
 
-  // Recale la molette quand la valeur change depuis l'extérieur.
+  // Recale la molette (position initiale et changements venus de l'extérieur).
   useEffect(() => {
     const el = ref.current;
     if (!el || defile.current) return;
-    const cible = index * HAUTEUR;
+    const g = Math.round(el.scrollTop / HAUTEUR);
+    const bloc = el.scrollTop > 0 ? Math.floor(g / taille) : blocCentral;
+    const cible = (bloc * taille + index) * HAUTEUR;
     if (Math.abs(el.scrollTop - cible) > 1) el.scrollTop = cible;
-  }, [index]);
+  }, [index, taille, blocCentral]);
 
   const auDefilement = () => {
     const el = ref.current;
@@ -38,8 +44,12 @@ function Molette({
     if (minuteur.current) clearTimeout(minuteur.current);
     minuteur.current = setTimeout(() => {
       defile.current = false;
-      const i = Math.round(el.scrollTop / HAUTEUR);
-      const v = valeurs[Math.max(0, Math.min(valeurs.length - 1, i))];
+      const g = Math.round(el.scrollTop / HAUTEUR);
+      const i = ((g % taille) + taille) % taille;
+      // Repositionne au centre de la liste répétée pour ne jamais buter.
+      const bloc = Math.floor(g / taille);
+      if (bloc < 2 || bloc > REPETITIONS - 3) el.scrollTop = (blocCentral * taille + i) * HAUTEUR;
+      const v = valeurs[i];
       if (v !== undefined && v !== valeur) onChange(v);
     }, 90);
   };
@@ -54,32 +64,34 @@ function Molette({
       onKeyDown={(e) => {
         if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
         e.preventDefault();
-        const i = Math.max(0, Math.min(valeurs.length - 1, index + (e.key === "ArrowDown" ? 1 : -1)));
+        const i = (index + (e.key === "ArrowDown" ? 1 : taille - 1)) % taille;
         const v = valeurs[i];
         if (v !== undefined) onChange(v);
       }}
-      style={{ height: VISIBLES * HAUTEUR, scrollSnapType: "y mandatory" }}
+      style={{
+        height: VISIBLES * HAUTEUR,
+        scrollSnapType: "y mandatory",
+        maskImage: "linear-gradient(to bottom, transparent, #000 35%, #000 65%, transparent)",
+        WebkitMaskImage: "linear-gradient(to bottom, transparent, #000 35%, #000 65%, transparent)",
+      }}
       className="w-[3.6rem] overflow-y-auto overscroll-contain outline-none [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <div style={{ height: HAUTEUR }} aria-hidden />
-      {valeurs.map((v) => {
-        const ecart = Math.abs(v === valeur ? 0 : valeurs.indexOf(v) - index);
-        return (
-          <div
-            key={v}
-            role="option"
-            aria-selected={v === valeur}
-            onClick={() => onChange(v)}
-            style={{ height: HAUTEUR, scrollSnapAlign: "center", opacity: ecart === 0 ? 1 : ecart === 1 ? 0.5 : 0.25 }}
-            className={cn(
-              "grid cursor-pointer select-none place-items-center tabular-nums transition-[font-size,opacity] duration-100",
-              v === valeur ? "text-3xl font-extrabold" : "text-2xl font-semibold text-muted-foreground",
-            )}
-          >
-            {String(v).padStart(2, "0")}
-          </div>
-        );
-      })}
+      {liste.map((v, i) => (
+        <div
+          key={i}
+          role="option"
+          aria-selected={v === valeur}
+          onClick={() => onChange(v)}
+          style={{ height: HAUTEUR, scrollSnapAlign: "center" }}
+          className={cn(
+            "grid cursor-pointer select-none place-items-center tabular-nums",
+            v === valeur ? "text-3xl font-extrabold" : "text-2xl font-semibold text-muted-foreground",
+          )}
+        >
+          {String(v).padStart(2, "0")}
+        </div>
+      ))}
       <div style={{ height: HAUTEUR }} aria-hidden />
     </div>
   );

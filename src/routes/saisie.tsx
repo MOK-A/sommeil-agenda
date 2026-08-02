@@ -1,13 +1,22 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Check, ChevronLeft, ChevronRight, Plus, Trash2, X } from "lucide-react";
+import {
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { ApercuGrille } from "@/components/apercu-grille";
 import { SelecteurNote } from "@/components/selecteur-note";
 import { SelecteurHeure } from "@/components/selecteur-heure";
 import { CurseurDuree } from "@/components/curseur-duree";
-import { Etoiles, ETOILES } from "@/components/etoiles";
+import { Etoiles, etoilesDe } from "@/components/etoiles";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -22,6 +31,7 @@ import {
   oublierTraitement,
   useRemarques,
   useTraitements,
+  useNuits,
 } from "@/lib/sleep/store";
 import { supprimerAvecAnnulation } from "@/lib/sleep/suppression";
 import { ajouterJours, dateISO, fromMinutes, libelleNuit, toMinutes } from "@/lib/sleep/time";
@@ -60,9 +70,9 @@ function nuitVide(date: string): Nuit {
     siestes: [],
     somnolences: [],
     longReveil: 0,
-    qualiteSommeil: "B",
-    qualiteReveil: "B",
-    formeJournee: "B",
+    qualiteSommeil: null,
+    qualiteReveil: null,
+    formeJournee: null,
     traitement: "",
     commentaire: "",
     majLe: "",
@@ -111,11 +121,16 @@ function Saisie() {
   const traitements = useTraitements();
   const remarques = useRemarques();
   const dateRef = useRef<HTMLInputElement>(null);
+  const nuits = useNuits();
   const existante = useMemo(() => (id ? chargerNuits().find((n) => n.id === id) : undefined), [id]);
   const [nuit, setNuit] = useState<Nuit>(
     () => existante ?? nuitVide(date ?? dateISO(new Date(Date.now() - 86400000))),
   );
   const [compact, setCompact] = useState(false);
+  /** La nuit affichée existe déjà dans le journal (coche verte). */
+  const [enregistree, setEnregistree] = useState(!!existante);
+  /** Des paramètres ont été touchés : l'aperçu repasse en couleur. */
+  const [modifiee, setModifiee] = useState(false);
 
   useEffect(() => {
     const auScroll = () => setCompact(window.scrollY > 40);
@@ -124,22 +139,41 @@ function Saisie() {
     return () => window.removeEventListener("scroll", auScroll);
   }, []);
 
-  const maj = (patch: Partial<Nuit>) => setNuit((n) => ({ ...n, ...patch }));
+  // Reprend la nuit déjà enregistrée à cette date (y compris après hydratation).
+  useEffect(() => {
+    const deja = nuits.find((n) => n.date === nuit.date);
+    if (!deja) return;
+    setEnregistree(true);
+    if (deja.id !== nuit.id && !modifiee) setNuit(deja);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nuits]);
+
+  const maj = (patch: Partial<Nuit>) => {
+    setModifiee(true);
+    setNuit((n) => ({ ...n, ...patch }));
+  };
 
   /** Change de date : reprend la nuit déjà enregistrée s'il y en a une (pas de doublon). */
   const changerDate = (nouvelleDate: string) => {
     if (!nouvelleDate) return;
     const deja = nuitParDate(nouvelleDate);
-    setNuit(deja && deja.id !== nuit.id ? deja : { ...nuit, date: nouvelleDate });
+    const reprise = deja && deja.id !== nuit.id;
+    setNuit(reprise ? deja : { ...nuitVide(nouvelleDate), id: nuit.id });
+    setEnregistree(!!deja);
+    setModifiee(false);
   };
 
-  const moyenne =
-    (ETOILES[nuit.qualiteSommeil] + ETOILES[nuit.qualiteReveil] + ETOILES[nuit.formeJournee]) / 3;
+  const notes = [nuit.qualiteSommeil, nuit.qualiteReveil, nuit.formeJournee].filter(Boolean);
+  const moyenne = notes.length
+    ? notes.reduce((s, n) => s + etoilesDe(n), 0) / notes.length
+    : 0;
 
   const enregistrer = () => {
     if (nuit.traitement.trim()) memoriserTraitement(nuit.traitement.trim());
     if (nuit.commentaire.trim()) memoriserRemarque(nuit.commentaire.trim());
     enregistrerNuit(nuit);
+    setEnregistree(true);
+    setModifiee(false);
     toast.success("Nuit enregistrée");
     navigate({ to: "/" });
   };
@@ -157,25 +191,29 @@ function Saisie() {
             <ChevronLeft className="size-6" aria-hidden />
           </button>
 
-          <button
-            type="button"
-            onClick={() => dateRef.current?.showPicker?.() ?? dateRef.current?.focus()}
+          <div
             className={cn(
-              "flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-3 font-bold text-primary-foreground shadow-sm transition-all",
+              "relative flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-3 font-bold text-primary-foreground shadow-sm transition-all",
               compact ? "min-h-10 text-sm" : "min-h-14 text-lg",
             )}
           >
             <CalendarDays className={compact ? "size-4 shrink-0" : "size-5 shrink-0"} aria-hidden />
             <span className="truncate">{libelleNuit(nuit.date)}</span>
-          </button>
-          <input
-            ref={dateRef}
-            type="date"
-            value={nuit.date}
-            onChange={(e) => changerDate(e.target.value)}
-            className="sr-only"
-            aria-label="Date de la nuit"
-          />
+            {enregistree && (
+              <CheckCircle2
+                className={cn("shrink-0 text-[var(--color-tres-bien)]", compact ? "size-4" : "size-5")}
+                aria-label="Nuit déjà enregistrée"
+              />
+            )}
+            <input
+              ref={dateRef}
+              type="date"
+              value={nuit.date}
+              onChange={(e) => changerDate(e.target.value)}
+              className="absolute inset-0 size-full cursor-pointer opacity-0"
+              aria-label="Choisir la date de la nuit"
+            />
+          </div>
 
           <button
             type="button"
@@ -196,7 +234,12 @@ function Saisie() {
         </div>
 
         <div className="carte p-3">
-          <ApercuGrille nuits={[nuit]} hauteurLigne={compact ? 28 : 34} origineHeure={18} />
+          <ApercuGrille
+            nuits={[nuit]}
+            hauteurLigne={compact ? 28 : 34}
+            origineHeure={18}
+            grise={!enregistree && !modifiee}
+          />
           {!compact && (
             <p className="mt-1 text-xs text-muted-foreground">
               Aperçu automatique — identique au document PDF remis au médecin.

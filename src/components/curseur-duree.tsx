@@ -29,31 +29,39 @@ export function CurseurDuree({
         </span>
       </div>
       <div className="flex items-center gap-3">
-        <Slider
-          value={[minutes]}
-          min={0}
-          max={60}
-          step={5}
-          aria-label={label}
-          onValueChange={([v]) => onChange(Math.min(max, heures * 60 + (v ?? 0)))}
-          className="h-11 flex-1 [&_[data-slot=slider-range]]:h-2.5 [&_[data-slot=slider-thumb]]:size-8 [&_[data-slot=slider-track]]:h-2.5"
-        />
-        <button
-          type="button"
-          aria-label="Retirer une heure"
-          onClick={() => onChange(Math.max(0, valeur - 60))}
-          className="carte-douce grid size-12 shrink-0 place-items-center text-primary"
-        >
-          <Minus className="size-6" aria-hidden />
-        </button>
-        <button
-          type="button"
-          aria-label="Ajouter une heure"
-          onClick={() => onChange(Math.min(max, valeur + 60))}
-          className="carte-douce grid size-12 shrink-0 place-items-center text-primary"
-        >
-          <Plus className="size-6" aria-hidden />
-        </button>
+        <div className="flex-1">
+          <Slider
+            value={[minutes]}
+            min={0}
+            max={60}
+            step={5}
+            aria-label={label}
+            onValueChange={([v]) => onChange(Math.min(max, heures * 60 + (v ?? 0)))}
+            className="h-11 w-full [&_[data-slot=slider-range]]:h-2.5 [&_[data-slot=slider-thumb]]:size-8 [&_[data-slot=slider-track]]:h-2.5"
+          />
+          <p className="text-center text-xs font-medium text-muted-foreground">minutes</p>
+        </div>
+        <div className="shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              aria-label="Retirer une heure"
+              onClick={() => onChange(Math.max(0, valeur - 60))}
+              className="carte-douce grid size-12 place-items-center text-primary"
+            >
+              <Minus className="size-6" aria-hidden />
+            </button>
+            <button
+              type="button"
+              aria-label="Ajouter une heure"
+              onClick={() => onChange(Math.min(max, valeur + 60))}
+              className="carte-douce grid size-12 place-items-center text-primary"
+            >
+              <Plus className="size-6" aria-hidden />
+            </button>
+          </div>
+          <p className="text-center text-xs font-medium text-muted-foreground">heures</p>
+        </div>
       </div>
     </div>
   );
