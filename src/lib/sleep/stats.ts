@@ -85,9 +85,9 @@ const NOTE_ETOILES: Record<string, number> = { TM: 1, M: 2, Moy: 3, B: 4, TB: 5 
  */
 export function niveauNuit(nuit: Nuit): 1 | 2 | 3 | 4 | 5 {
   const moyenne =
-    ((NOTE_ETOILES[nuit.qualiteSommeil] ?? 3) +
-      (NOTE_ETOILES[nuit.qualiteReveil] ?? 3) +
-      (NOTE_ETOILES[nuit.formeJournee] ?? 3)) /
+    ((NOTE_ETOILES[nuit.qualiteSommeil ?? ""] ?? 3) +
+      (NOTE_ETOILES[nuit.qualiteReveil ?? ""] ?? 3) +
+      (NOTE_ETOILES[nuit.formeJournee ?? ""] ?? 3)) /
     3;
   return Math.min(5, Math.max(1, Math.round(moyenne))) as 1 | 2 | 3 | 4 | 5;
 }

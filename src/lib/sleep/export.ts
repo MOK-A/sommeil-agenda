@@ -60,9 +60,9 @@ export function exporterCsv(nuits: Nuit[]) {
       String(Math.round(m.tempsEveilNocturne)),
       n.siestes?.[0]?.debut ?? "",
       n.siestes?.[0]?.fin ?? "",
-      n.qualiteSommeil,
-      n.qualiteReveil,
-      n.formeJournee,
+      n.qualiteSommeil ?? "",
+      n.qualiteReveil ?? "",
+      n.formeJournee ?? "",
       [n.traitement, n.commentaire]
         .filter((v) => v && v.trim())
         .join(" / ")

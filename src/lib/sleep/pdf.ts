@@ -225,7 +225,7 @@ function dessinerLigne(doc: jsPDF, y: number, nuit?: Nuit) {
   doc.text(dateCellule(nuit.date), X0 + 2, y + H_LIGNE - 2.2);
   const notes = [nuit.qualiteSommeil, nuit.qualiteReveil, nuit.formeJournee];
   notes.forEach((n, i) =>
-    doc.text(n, X_NOTES + i * L_NOTE + L_NOTE / 2, y + H_LIGNE - 2.2, { align: "center" }),
+    doc.text(n ?? "", X_NOTES + i * L_NOTE + L_NOTE / 2, y + H_LIGNE - 2.2, { align: "center" }),
   );
   const remarques = [nuit.traitement, nuit.commentaire].filter((v) => v && v.trim()).join(" / ");
   if (remarques) {

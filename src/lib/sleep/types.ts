@@ -34,9 +34,9 @@ export interface Nuit {
   longReveil: number;
   /** Somnolences ressenties dans la journée (marqueurs "S"). */
   somnolences: string[];
-  qualiteSommeil: Note;
-  qualiteReveil: Note;
-  formeJournee: Note;
+  qualiteSommeil: Note | null;
+  qualiteReveil: Note | null;
+  formeJournee: Note | null;
   /** Traitement(s) du jour. */
   traitement: string;
   commentaire: string;

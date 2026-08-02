@@ -5,6 +5,9 @@ import type { Note } from "@/lib/sleep/types";
 /** Conversion note → nombre d'étoiles (TM = 1 … TB = 5). */
 export const ETOILES: Record<Note, number> = { TM: 1, M: 2, Moy: 3, B: 4, TB: 5 };
 
+/** Étoiles d'une note éventuellement non renseignée. */
+export const etoilesDe = (n: Note | null | undefined) => (n ? ETOILES[n] : 0);
+
 /** Rangée de 5 étoiles, remplissage fractionnaire possible. */
 export function Etoiles({
   valeur,
