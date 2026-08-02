@@ -31,6 +31,7 @@ import {
   oublierTraitement,
   useRemarques,
   useTraitements,
+  useNuits,
 } from "@/lib/sleep/store";
 import { supprimerAvecAnnulation } from "@/lib/sleep/suppression";
 import { ajouterJours, dateISO, fromMinutes, libelleNuit, toMinutes } from "@/lib/sleep/time";
@@ -120,6 +121,7 @@ function Saisie() {
   const traitements = useTraitements();
   const remarques = useRemarques();
   const dateRef = useRef<HTMLInputElement>(null);
+  const nuits = useNuits();
   const existante = useMemo(() => (id ? chargerNuits().find((n) => n.id === id) : undefined), [id]);
   const [nuit, setNuit] = useState<Nuit>(
     () => existante ?? nuitVide(date ?? dateISO(new Date(Date.now() - 86400000))),
@@ -136,6 +138,15 @@ function Saisie() {
     window.addEventListener("scroll", auScroll, { passive: true });
     return () => window.removeEventListener("scroll", auScroll);
   }, []);
+
+  // Reprend la nuit déjà enregistrée à cette date (y compris après hydratation).
+  useEffect(() => {
+    const deja = nuits.find((n) => n.date === nuit.date);
+    if (!deja) return;
+    setEnregistree(true);
+    if (deja.id !== nuit.id && !modifiee) setNuit(deja);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nuits]);
 
   const maj = (patch: Partial<Nuit>) => {
     setModifiee(true);
