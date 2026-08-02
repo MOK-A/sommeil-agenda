@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Download, FileJson, FileSpreadsheet, FileText, Image } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, Image } from "lucide-react";
 import { toast } from "sonner";
 import {
   Area,
@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { useNuits, useReglages } from "@/lib/sleep/store";
-import { exporterCsv, exporterJson, exporterPdf, exporterPng } from "@/lib/sleep/export";
+import { exporterCsv, exporterPdf, exporterPng } from "@/lib/sleep/export";
 import { calculerStatistiques } from "@/lib/sleep/stats";
 import { dateCourte, dureeHumaine, fromMinutes } from "@/lib/sleep/time";
 
@@ -53,13 +53,12 @@ function Bloc({ titre, valeur, detail }: { titre: string; valeur: string; detail
 function Statistiques() {
   const nuits = useNuits();
   const reglages = useReglages();
-  const [periode, setPeriode] = useState(30);
+  const [periode, setPeriode] = useState(7);
   const selection = useMemo(() => nuits.slice(0, periode), [nuits, periode]);
   const stats = useMemo(() => calculerStatistiques(selection), [selection]);
 
   const donnees = stats.serie
     .slice()
-    .reverse()
     .map((p) => {
       const coucher = p.coucher / 60;
       const lever = p.lever / 60;
@@ -82,12 +81,6 @@ function Statistiques() {
     },
     { icone: Image, titre: "Image PNG", detail: "Le graphique seul, à partager", action: () => exporterPng(nuits) },
     { icone: FileSpreadsheet, titre: "Tableur CSV", detail: "Une ligne par nuit", action: () => exporterCsv(nuits) },
-    {
-      icone: FileJson,
-      titre: "Sauvegarde JSON",
-      detail: "Toutes vos données",
-      action: () => exporterJson(nuits, reglages),
-    },
   ];
 
   return (

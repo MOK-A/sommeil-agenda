@@ -8,11 +8,14 @@ export function ApercuGrille({
   hauteurLigne = 30,
   avecDates = false,
   origineHeure = 20,
+  grise = false,
 }: {
   nuits: Nuit[];
   hauteurLigne?: number;
   avecDates?: boolean;
   origineHeure?: number;
+  /** Aperçu grisé tant que la nuit n'a pas été renseignée. */
+  grise?: boolean;
 }) {
   const conteneur = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -39,9 +42,12 @@ export function ApercuGrille({
       fond: style.getPropertyValue("--card").trim() || "#fff",
       couleurTexte: style.getPropertyValue("--foreground").trim() || "#111",
       couleurTrait: style.getPropertyValue("--muted-foreground").trim() || "#888",
-      couleurBarre: style.getPropertyValue("--nuit").trim() || "#4b5563",
+      couleurBarre:
+        (grise
+          ? style.getPropertyValue("--muted-foreground").trim()
+          : style.getPropertyValue("--nuit").trim()) || "#4b5563",
     });
-  }, [nuits, largeur, hauteurLigne, avecDates, origineHeure]);
+  }, [nuits, largeur, hauteurLigne, avecDates, origineHeure, grise]);
 
   return (
     <div ref={conteneur} className="w-full">

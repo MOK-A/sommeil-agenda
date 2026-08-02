@@ -1,12 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useRef } from "react";
-import { Upload } from "lucide-react";
+import { Download, FileJson, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { chargerNuits, enregistrerReglages, remplacerNuits, useReglages } from "@/lib/sleep/store";
-import { lireSauvegarde } from "@/lib/sleep/export";
+import {
+  chargerNuits,
+  enregistrerReglages,
+  remplacerNuits,
+  useNuits,
+  useReglages,
+} from "@/lib/sleep/store";
+import { exporterJson, lireSauvegarde } from "@/lib/sleep/export";
 import type { Reglages } from "@/lib/sleep/types";
 
 export const Route = createFileRoute("/parametres")({
@@ -59,6 +65,7 @@ function Champ({
 
 function Parametres() {
   const reglages = useReglages();
+  const nuits = useNuits();
   const fichier = useRef<HTMLInputElement>(null);
 
   const maj = (patch: Partial<Reglages>) => enregistrerReglages({ ...reglages, ...patch });
@@ -137,6 +144,32 @@ function Parametres() {
               onChange={(e) => maj({ rappelMatin: e.target.value || null })}
             />
           </div>
+        </Section>
+
+        <Section titre="Sauvegarde JSON">
+          <button
+            type="button"
+            onClick={() => {
+              if (!nuits.length) {
+                toast("Aucune nuit à exporter");
+                return;
+              }
+              exporterJson(nuits, reglages);
+              toast.success("Sauvegarde JSON générée");
+            }}
+            className="carte-douce flex w-full items-center gap-3 p-4 text-left"
+          >
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-secondary text-primary">
+              <FileJson className="size-5" aria-hidden />
+            </span>
+            <span className="flex-1">
+              <span className="block font-semibold">Exporter mes données</span>
+              <span className="block text-xs text-muted-foreground">
+                Toutes vos nuits et vos réglages
+              </span>
+            </span>
+            <Download className="size-4 text-muted-foreground" aria-hidden />
+          </button>
         </Section>
 
         <Section titre="Restaurer une sauvegarde">
