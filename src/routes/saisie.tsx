@@ -1,6 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Check, ChevronLeft, ChevronRight, Plus, Trash2, X } from "lucide-react";
+import {
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { ApercuGrille } from "@/components/apercu-grille";
@@ -171,25 +180,29 @@ function Saisie() {
             <ChevronLeft className="size-6" aria-hidden />
           </button>
 
-          <button
-            type="button"
-            onClick={() => dateRef.current?.showPicker?.() ?? dateRef.current?.focus()}
+          <div
             className={cn(
-              "flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-3 font-bold text-primary-foreground shadow-sm transition-all",
+              "relative flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-3 font-bold text-primary-foreground shadow-sm transition-all",
               compact ? "min-h-10 text-sm" : "min-h-14 text-lg",
             )}
           >
             <CalendarDays className={compact ? "size-4 shrink-0" : "size-5 shrink-0"} aria-hidden />
             <span className="truncate">{libelleNuit(nuit.date)}</span>
-          </button>
-          <input
-            ref={dateRef}
-            type="date"
-            value={nuit.date}
-            onChange={(e) => changerDate(e.target.value)}
-            className="sr-only"
-            aria-label="Date de la nuit"
-          />
+            {enregistree && (
+              <CheckCircle2
+                className={cn("shrink-0 text-[var(--color-tres-bien)]", compact ? "size-4" : "size-5")}
+                aria-label="Nuit déjà enregistrée"
+              />
+            )}
+            <input
+              ref={dateRef}
+              type="date"
+              value={nuit.date}
+              onChange={(e) => changerDate(e.target.value)}
+              className="absolute inset-0 size-full cursor-pointer opacity-0"
+              aria-label="Choisir la date de la nuit"
+            />
+          </div>
 
           <button
             type="button"
@@ -210,7 +223,12 @@ function Saisie() {
         </div>
 
         <div className="carte p-3">
-          <ApercuGrille nuits={[nuit]} hauteurLigne={compact ? 28 : 34} origineHeure={18} />
+          <ApercuGrille
+            nuits={[nuit]}
+            hauteurLigne={compact ? 28 : 34}
+            origineHeure={18}
+            grise={!enregistree && !modifiee}
+          />
           {!compact && (
             <p className="mt-1 text-xs text-muted-foreground">
               Aperçu automatique — identique au document PDF remis au médecin.
