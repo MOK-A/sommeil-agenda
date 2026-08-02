@@ -15,7 +15,10 @@ type Ecouteur = () => void;
 const ecouteurs = new Set<Ecouteur>();
 const notifier = () => ecouteurs.forEach((e) => e());
 
-function lire<T>(cle: string, defaut: T): T {
+/** Passe à vrai après l'hydratation, pour que le premier rendu client soit identique au serveur. */
+let hydrate = false;
+
+function lireBrut<T>(cle: string, defaut: T): T {
   if (typeof window === "undefined") return defaut;
   try {
     const brut = window.localStorage.getItem(cle);
@@ -23,6 +26,10 @@ function lire<T>(cle: string, defaut: T): T {
   } catch {
     return defaut;
   }
+}
+
+function lire<T>(cle: string, defaut: T): T {
+  return hydrate ? lireBrut(cle, defaut) : defaut;
 }
 
 function ecrire(cle: string, valeur: unknown) {
@@ -57,7 +64,9 @@ export function chargerNuits(): Nuit[] {
 
 export function enregistrerNuit(nuit: Nuit) {
   // Une seule nuit par date : toute nuit existante à la même date est remplacée.
-  const nuits = lire<Nuit[]>(CLE_NUITS, []).filter((n) => n.id !== nuit.id && n.date !== nuit.date);
+  const nuits = lireBrut<Nuit[]>(CLE_NUITS, []).filter(
+    (n) => n.id !== nuit.id && n.date !== nuit.date,
+  );
   nuits.push({ ...nuit, majLe: new Date().toISOString() });
   ecrire(CLE_NUITS, nuits);
 }
@@ -70,7 +79,7 @@ export function nuitParDate(date: string): Nuit | undefined {
 export function supprimerNuit(id: string) {
   ecrire(
     CLE_NUITS,
-    lire<Nuit[]>(CLE_NUITS, []).filter((n) => n.id !== id),
+    lireBrut<Nuit[]>(CLE_NUITS, []).filter((n) => n.id !== id),
   );
 }
 
@@ -90,6 +99,7 @@ function useSynchro<T>(lecture: () => T): [T, () => void] {
   const [valeur, setValeur] = useState<T>(() => lecture());
   const rafraichir = useCallback(() => setValeur(lecture()), [lecture]);
   useEffect(() => {
+    hydrate = true;
     rafraichir();
     ecouteurs.add(rafraichir);
     window.addEventListener("storage", rafraichir);
