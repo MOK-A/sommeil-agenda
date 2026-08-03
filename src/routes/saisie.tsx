@@ -273,10 +273,17 @@ function Saisie() {
       </div>
 
       <div className="space-y-4">
-        <Carte numero={1} titre="Heure du coucher">
+        <Carte
+          numero={1}
+          titre="Heure du coucher"
+          action={
+            <BoutonValider fige={!!figes["coucher"]} onToggle={() => basculer("coucher")} />
+          }
+        >
           <SelecteurHeure
             label="Mise au lit"
             valeur={nuit.heureCoucher}
+            fige={!!figes["coucher"]}
             onChange={(v) => maj({ heureCoucher: v })}
           />
         </Carte>
@@ -310,13 +317,22 @@ function Saisie() {
           {nuit.reveils.length === 0 ? (
             <p className="text-sm text-muted-foreground">Aucun réveil noté.</p>
           ) : (
-            <ul className="space-y-3">
+            <ul className="space-y-4">
               {nuit.reveils.map((r) => (
                 <li key={r.id} className="space-y-2">
                   <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Supprimer ce réveil"
+                      onClick={() => maj({ reveils: nuit.reveils.filter((x) => x.id !== r.id) })}
+                      className="carte-douce grid size-12 shrink-0 place-items-center text-destructive"
+                    >
+                      <Trash2 className="size-4" aria-hidden />
+                    </button>
                     <SelecteurHeure
                       label="Début"
                       valeur={r.debut}
+                      fige={!!figes[r.id]}
                       onChange={(v) =>
                         maj({
                           reveils: nuit.reveils.map((x) =>
@@ -328,52 +344,59 @@ function Saisie() {
                     <SelecteurHeure
                       label="Fin"
                       valeur={r.fin}
+                      fige={!!figes[r.id]}
                       onChange={(v) =>
                         maj({
                           reveils: nuit.reveils.map((x) => (x.id === r.id ? { ...x, fin: v } : x)),
                         })
                       }
                     />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <BoutonValider fige={!!figes[r.id]} onToggle={() => basculer(r.id)} />
                     <button
                       type="button"
-                      aria-label="Supprimer ce réveil"
-                      onClick={() => maj({ reveils: nuit.reveils.filter((x) => x.id !== r.id) })}
-                      className="carte-douce grid size-12 shrink-0 place-items-center text-destructive"
-                    >
-                      <Trash2 className="size-4" aria-hidden />
-                    </button>
-                  </div>
-                  <label className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      checked={!!r.demi}
-                      onChange={(e) =>
+                      aria-pressed={!!r.demi}
+                      onClick={() =>
                         maj({
                           reveils: nuit.reveils.map((x) =>
-                            x.id === r.id ? { ...x, demi: e.target.checked } : x,
+                            x.id === r.id ? { ...x, demi: !x.demi } : x,
                           ),
                         })
                       }
-                      className="size-5 accent-[var(--color-primary)]"
-                    />
-                    1/2 réveil (hachures zébrées)
-                  </label>
+                      className={cn(
+                        "min-h-12 rounded-2xl px-4 text-sm font-semibold transition-colors",
+                        r.demi ? "bg-primary text-primary-foreground" : "carte-douce text-muted-foreground",
+                      )}
+                    >
+                      1/2 réveil
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
           )}
         </Carte>
 
-        <Carte numero={4} titre="Long réveil">
+        <Carte
+          numero={4}
+          titre="Heure de lever"
+          action={<BoutonValider fige={!!figes["lever"]} onToggle={() => basculer("lever")} />}
+        >
+          <SelecteurHeure
+            label="Lever"
+            valeur={nuit.heureLever}
+            fige={!!figes["lever"]}
+            onChange={(v) => maj({ heureLever: v })}
+          />
+        </Carte>
+
+        <Carte numero={5} titre="Long réveil">
           <CurseurDuree
             label="Éveillé avant le lever"
             valeur={nuit.longReveil}
             onChange={(v) => maj({ longReveil: v })}
           />
-        </Carte>
-
-        <Carte numero={5} titre="Heure de lever">
-          <SelecteurHeure label="Lever" valeur={nuit.heureLever} onChange={(v) => maj({ heureLever: v })} />
         </Carte>
 
         <Carte
@@ -395,35 +418,40 @@ function Saisie() {
           {nuit.siestes.length === 0 ? (
             <p className="text-sm text-muted-foreground">Pas de sieste.</p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-4">
               {nuit.siestes.map((s) => (
-                <li key={s.id} className="flex items-center gap-2">
-                  <SelecteurHeure
-                    label="Début"
-                    valeur={s.debut}
-                    onChange={(v) =>
-                      maj({
-                        siestes: nuit.siestes.map((x) =>
-                          x.id === s.id ? { ...x, debut: v, fin: decaler(v, x.debut, x.fin) } : x,
-                        ),
-                      })
-                    }
-                  />
-                  <SelecteurHeure
-                    label="Fin"
-                    valeur={s.fin}
-                    onChange={(v) =>
-                      maj({ siestes: nuit.siestes.map((x) => (x.id === s.id ? { ...x, fin: v } : x)) })
-                    }
-                  />
-                  <button
-                    type="button"
-                    aria-label="Supprimer cette sieste"
-                    onClick={() => maj({ siestes: nuit.siestes.filter((x) => x.id !== s.id) })}
-                    className="carte-douce grid size-12 shrink-0 place-items-center text-destructive"
-                  >
-                    <Trash2 className="size-4" aria-hidden />
-                  </button>
+                <li key={s.id} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Supprimer cette sieste"
+                      onClick={() => maj({ siestes: nuit.siestes.filter((x) => x.id !== s.id) })}
+                      className="carte-douce grid size-12 shrink-0 place-items-center text-destructive"
+                    >
+                      <Trash2 className="size-4" aria-hidden />
+                    </button>
+                    <SelecteurHeure
+                      label="Début"
+                      valeur={s.debut}
+                      fige={!!figes[s.id]}
+                      onChange={(v) =>
+                        maj({
+                          siestes: nuit.siestes.map((x) =>
+                            x.id === s.id ? { ...x, debut: v, fin: decaler(v, x.debut, x.fin) } : x,
+                          ),
+                        })
+                      }
+                    />
+                    <SelecteurHeure
+                      label="Fin"
+                      valeur={s.fin}
+                      fige={!!figes[s.id]}
+                      onChange={(v) =>
+                        maj({ siestes: nuit.siestes.map((x) => (x.id === s.id ? { ...x, fin: v } : x)) })
+                      }
+                    />
+                  </div>
+                  <BoutonValider fige={!!figes[s.id]} onToggle={() => basculer(s.id)} />
                 </li>
               ))}
             </ul>
@@ -447,24 +475,28 @@ function Saisie() {
           {nuit.somnolences.length === 0 ? (
             <p className="text-sm text-muted-foreground">Aucune somnolence dans la journée.</p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-4">
               {nuit.somnolences.map((h, i) => (
-                <li key={i} className="flex items-center gap-2">
-                  <SelecteurHeure
-                    label="Moment"
-                    valeur={h}
-                    onChange={(v) =>
-                      maj({ somnolences: nuit.somnolences.map((x, j) => (j === i ? v : x)) })
-                    }
-                  />
-                  <button
-                    type="button"
-                    aria-label="Supprimer cette somnolence"
-                    onClick={() => maj({ somnolences: nuit.somnolences.filter((_, j) => j !== i) })}
-                    className="carte-douce grid size-12 shrink-0 place-items-center text-destructive"
-                  >
-                    <Trash2 className="size-4" aria-hidden />
-                  </button>
+                <li key={i} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Supprimer cette somnolence"
+                      onClick={() => maj({ somnolences: nuit.somnolences.filter((_, j) => j !== i) })}
+                      className="carte-douce grid size-12 shrink-0 place-items-center text-destructive"
+                    >
+                      <Trash2 className="size-4" aria-hidden />
+                    </button>
+                    <SelecteurHeure
+                      label="Moment"
+                      valeur={h}
+                      fige={!!figes[`som-${i}`]}
+                      onChange={(v) =>
+                        maj({ somnolences: nuit.somnolences.map((x, j) => (j === i ? v : x)) })
+                      }
+                    />
+                  </div>
+                  <BoutonValider fige={!!figes[`som-${i}`]} onToggle={() => basculer(`som-${i}`)} />
                 </li>
               ))}
             </ul>
