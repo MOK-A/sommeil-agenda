@@ -203,7 +203,15 @@ function Saisie() {
             <ChevronLeft className="size-6" aria-hidden />
           </button>
 
-          <div
+          <button
+            type="button"
+            aria-label="Choisir la date de la nuit"
+            onClick={() => {
+              const el = dateRef.current;
+              if (!el) return;
+              if ("showPicker" in el) (el as HTMLInputElement & { showPicker: () => void }).showPicker();
+              else el.click();
+            }}
             className={cn(
               "relative flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-3 font-bold text-primary-foreground shadow-sm transition-all",
               compact ? "min-h-10 text-sm" : "min-h-14 text-lg",
@@ -221,17 +229,20 @@ function Saisie() {
               ref={dateRef}
               type="date"
               value={nuit.date}
+              max={dateMax}
               onChange={(e) => changerDate(e.target.value)}
-              className="absolute inset-0 size-full cursor-pointer opacity-0"
-              aria-label="Choisir la date de la nuit"
+              tabIndex={-1}
+              aria-hidden
+              className="pointer-events-none absolute bottom-0 left-1/2 size-px opacity-0"
             />
-          </div>
+          </button>
 
           <button
             type="button"
             aria-label="Jour suivant"
+            disabled={nuit.date >= dateMax}
             onClick={() => changerDate(ajouterJours(nuit.date, 1))}
-            className="carte-douce grid size-11 shrink-0 place-items-center text-primary"
+            className="carte-douce grid size-11 shrink-0 place-items-center text-primary disabled:opacity-40"
           >
             <ChevronRight className="size-6" aria-hidden />
           </button>
