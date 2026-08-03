@@ -209,8 +209,9 @@ function Saisie() {
             onClick={() => {
               const el = dateRef.current;
               if (!el) return;
-              if ("showPicker" in el) (el as HTMLInputElement & { showPicker: () => void }).showPicker();
-              else el.click();
+              const avecPicker = el as HTMLInputElement & { showPicker?: () => void };
+              if (typeof avecPicker.showPicker === "function") avecPicker.showPicker();
+              else avecPicker.click();
             }}
             className={cn(
               "relative flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-3 font-bold text-primary-foreground shadow-sm transition-all",
