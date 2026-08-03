@@ -15,6 +15,7 @@ import { z } from "zod";
 import { ApercuGrille } from "@/components/apercu-grille";
 import { SelecteurNote } from "@/components/selecteur-note";
 import { SelecteurHeure } from "@/components/selecteur-heure";
+import { BoutonValider } from "@/components/bouton-valider";
 import { CurseurDuree } from "@/components/curseur-duree";
 import { Etoiles, etoilesDe } from "@/components/etoiles";
 import { Input } from "@/components/ui/input";
@@ -122,11 +123,17 @@ function Saisie() {
   const remarques = useRemarques();
   const dateRef = useRef<HTMLInputElement>(null);
   const nuits = useNuits();
+  /** Date maximale autorisée : la journée en cours (pas de nuit dans le futur). */
+  const dateMax = dateISO(new Date());
   const existante = useMemo(() => (id ? chargerNuits().find((n) => n.id === id) : undefined), [id]);
   const [nuit, setNuit] = useState<Nuit>(
     () => existante ?? nuitVide(date ?? dateISO(new Date(Date.now() - 86400000))),
   );
   const [compact, setCompact] = useState(false);
+  /** Valeurs validées/figées (clés : "coucher", "lever", id de réveil/sieste, "som-i"). */
+  const [figes, setFiges] = useState<Record<string, boolean>>({});
+  const basculer = (cle: string) => setFiges((f) => ({ ...f, [cle]: !f[cle] }));
+  const ouvrir = (cle: string) => setFiges((f) => (f[cle] ? { ...f, [cle]: false } : f));
   /** La nuit affichée existe déjà dans le journal (coche verte). */
   const [enregistree, setEnregistree] = useState(!!existante);
   /** Des paramètres ont été touchés : l'aperçu repasse en couleur. */
@@ -156,11 +163,16 @@ function Saisie() {
   /** Change de date : reprend la nuit déjà enregistrée s'il y en a une (pas de doublon). */
   const changerDate = (nouvelleDate: string) => {
     if (!nouvelleDate) return;
+    if (nouvelleDate > dateMax) {
+      toast("Impossible de remplir une nuit à venir");
+      return;
+    }
     const deja = nuitParDate(nouvelleDate);
     const reprise = deja && deja.id !== nuit.id;
     setNuit(reprise ? deja : { ...nuitVide(nouvelleDate), id: nuit.id });
     setEnregistree(!!deja);
     setModifiee(false);
+    setFiges({});
   };
 
   const notes = [nuit.qualiteSommeil, nuit.qualiteReveil, nuit.formeJournee].filter(Boolean);
