@@ -1,28 +1,33 @@
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
-const HAUTEUR = 40;
+export const HAUTEUR = 40;
 const VISIBLES = 3; // hauteur totale = 3 lignes, comme l'alarme iOS
-const REPETITIONS = 11; // la liste est répétée pour un défilement "infini"
 const HEURES = Array.from({ length: 24 }, (_, i) => i);
 const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5);
 
 /** Molette défilante infinie à inertie native, calée sur la ligne centrale. */
-function Molette({
+export function Molette({
   valeurs,
   valeur,
   onChange,
   aria,
+  largeur = "3.6rem",
+  format = (v: number) => String(v).padStart(2, "0"),
 }: {
   valeurs: number[];
   valeur: number;
   onChange: (v: number) => void;
   aria: string;
+  largeur?: string;
+  format?: (v: number) => string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const minuteur = useRef<ReturnType<typeof setTimeout> | null>(null);
   const defile = useRef(false);
   const taille = valeurs.length;
+  // La liste est répétée pour un défilement "infini" (moins de copies si longue).
+  const REPETITIONS = taille > 40 ? 3 : 11;
   const index = Math.max(0, valeurs.indexOf(valeur));
   const liste = Array.from({ length: REPETITIONS * taille }, (_, i) => valeurs[i % taille]!);
   const blocCentral = Math.floor(REPETITIONS / 2);
@@ -70,11 +75,12 @@ function Molette({
       }}
       style={{
         height: VISIBLES * HAUTEUR,
+        width: largeur,
         scrollSnapType: "y mandatory",
         maskImage: "linear-gradient(to bottom, transparent, #000 35%, #000 65%, transparent)",
         WebkitMaskImage: "linear-gradient(to bottom, transparent, #000 35%, #000 65%, transparent)",
       }}
-      className="w-[3.6rem] overflow-y-auto overscroll-contain outline-none [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="overflow-y-auto overscroll-contain outline-none [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <div style={{ height: HAUTEUR }} aria-hidden />
       {liste.map((v, i) => (
@@ -89,7 +95,7 @@ function Molette({
             v === valeur ? "text-3xl font-extrabold" : "text-2xl font-semibold text-muted-foreground",
           )}
         >
-          {String(v).padStart(2, "0")}
+          {format(v)}
         </div>
       ))}
       <div style={{ height: HAUTEUR }} aria-hidden />
@@ -103,11 +109,14 @@ export function SelecteurHeure({
   valeur,
   onChange,
   className,
+  fige = false,
 }: {
   label?: string;
   valeur: string;
   onChange: (v: string) => void;
   className?: string;
+  /** Valeur validée : affichage simple, non modifiable. */
+  fige?: boolean;
 }) {
   const parts = valeur.split(":");
   const h = Number(parts[0] ?? 0) || 0;
@@ -120,6 +129,14 @@ export function SelecteurHeure({
       {label && (
         <span className="block text-center text-xs font-medium text-muted-foreground">{label}</span>
       )}
+      {fige ? (
+        <div
+          className="grid place-items-center text-3xl font-extrabold tabular-nums"
+          style={{ height: VISIBLES * HAUTEUR }}
+        >
+          {`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`}
+        </div>
+      ) : (
       <div className="relative mt-1">
         <div
           className="pointer-events-none absolute inset-x-1 rounded-xl bg-background/70"
@@ -137,6 +154,7 @@ export function SelecteurHeure({
           />
         </div>
       </div>
+      )}
     </div>
   );
 }

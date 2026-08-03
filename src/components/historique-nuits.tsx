@@ -109,12 +109,15 @@ export function HistoriqueNuits() {
               {Array.from({ length: nbJours }).map((_, i) => {
                 const iso = dateISO(new Date(mois.annee, mois.mois, i + 1));
                 const nuit = parDate.get(iso);
+                const futur = iso > dateISO(new Date());
                 const contenu = (
                   <span className={cn("grid aspect-square w-full place-items-center rounded-xl text-sm font-medium", nuit ? `${COULEURS[niveauNuit(nuit)]} text-background` : "carte-douce text-muted-foreground")}>
                     {i + 1}
                   </span>
                 );
-                return nuit ? (
+                return futur && !nuit ? (
+                  <span key={iso} aria-disabled className="pointer-events-none opacity-40">{contenu}</span>
+                ) : nuit ? (
                   <Link key={iso} to="/saisie" search={{ id: nuit.id, date: undefined }} aria-label={libelleNuit(iso)}>{contenu}</Link>
                 ) : (
                   <Link key={iso} to="/saisie" search={{ date: iso, id: undefined }} aria-label={`Remplir le ${iso}`}>{contenu}</Link>

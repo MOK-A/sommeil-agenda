@@ -15,6 +15,7 @@ import { z } from "zod";
 import { ApercuGrille } from "@/components/apercu-grille";
 import { SelecteurNote } from "@/components/selecteur-note";
 import { SelecteurHeure } from "@/components/selecteur-heure";
+import { BoutonValider } from "@/components/bouton-valider";
 import { CurseurDuree } from "@/components/curseur-duree";
 import { Etoiles, etoilesDe } from "@/components/etoiles";
 import { Input } from "@/components/ui/input";
@@ -122,11 +123,16 @@ function Saisie() {
   const remarques = useRemarques();
   const dateRef = useRef<HTMLInputElement>(null);
   const nuits = useNuits();
+  /** Date maximale autorisée : la journée en cours (pas de nuit dans le futur). */
+  const dateMax = dateISO(new Date());
   const existante = useMemo(() => (id ? chargerNuits().find((n) => n.id === id) : undefined), [id]);
   const [nuit, setNuit] = useState<Nuit>(
     () => existante ?? nuitVide(date ?? dateISO(new Date(Date.now() - 86400000))),
   );
   const [compact, setCompact] = useState(false);
+  /** Valeurs validées/figées (clés : "coucher", "lever", id de réveil/sieste, "som-i"). */
+  const [figes, setFiges] = useState<Record<string, boolean>>({});
+  const basculer = (cle: string) => setFiges((f) => ({ ...f, [cle]: !f[cle] }));
   /** La nuit affichée existe déjà dans le journal (coche verte). */
   const [enregistree, setEnregistree] = useState(!!existante);
   /** Des paramètres ont été touchés : l'aperçu repasse en couleur. */
@@ -156,11 +162,16 @@ function Saisie() {
   /** Change de date : reprend la nuit déjà enregistrée s'il y en a une (pas de doublon). */
   const changerDate = (nouvelleDate: string) => {
     if (!nouvelleDate) return;
+    if (nouvelleDate > dateMax) {
+      toast("Impossible de remplir une nuit à venir");
+      return;
+    }
     const deja = nuitParDate(nouvelleDate);
     const reprise = deja && deja.id !== nuit.id;
     setNuit(reprise ? deja : { ...nuitVide(nouvelleDate), id: nuit.id });
     setEnregistree(!!deja);
     setModifiee(false);
+    setFiges({});
   };
 
   const notes = [nuit.qualiteSommeil, nuit.qualiteReveil, nuit.formeJournee].filter(Boolean);
@@ -191,7 +202,16 @@ function Saisie() {
             <ChevronLeft className="size-6" aria-hidden />
           </button>
 
-          <div
+          <button
+            type="button"
+            aria-label="Choisir la date de la nuit"
+            onClick={() => {
+              const el = dateRef.current;
+              if (!el) return;
+              const avecPicker = el as HTMLInputElement & { showPicker?: () => void };
+              if (typeof avecPicker.showPicker === "function") avecPicker.showPicker();
+              else avecPicker.click();
+            }}
             className={cn(
               "relative flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-3 font-bold text-primary-foreground shadow-sm transition-all",
               compact ? "min-h-10 text-sm" : "min-h-14 text-lg",
@@ -209,17 +229,20 @@ function Saisie() {
               ref={dateRef}
               type="date"
               value={nuit.date}
+              max={dateMax}
               onChange={(e) => changerDate(e.target.value)}
-              className="absolute inset-0 size-full cursor-pointer opacity-0"
-              aria-label="Choisir la date de la nuit"
+              tabIndex={-1}
+              aria-hidden
+              className="pointer-events-none absolute bottom-0 left-1/2 size-px opacity-0"
             />
-          </div>
+          </button>
 
           <button
             type="button"
             aria-label="Jour suivant"
+            disabled={nuit.date >= dateMax}
             onClick={() => changerDate(ajouterJours(nuit.date, 1))}
-            className="carte-douce grid size-11 shrink-0 place-items-center text-primary"
+            className="carte-douce grid size-11 shrink-0 place-items-center text-primary disabled:opacity-40"
           >
             <ChevronRight className="size-6" aria-hidden />
           </button>
@@ -249,10 +272,17 @@ function Saisie() {
       </div>
 
       <div className="space-y-4">
-        <Carte numero={1} titre="Heure du coucher">
+        <Carte
+          numero={1}
+          titre="Heure du coucher"
+          action={
+            <BoutonValider fige={!!figes["coucher"]} onToggle={() => basculer("coucher")} />
+          }
+        >
           <SelecteurHeure
             label="Mise au lit"
             valeur={nuit.heureCoucher}
+            fige={!!figes["coucher"]}
             onChange={(v) => maj({ heureCoucher: v })}
           />
         </Carte>
@@ -286,13 +316,22 @@ function Saisie() {
           {nuit.reveils.length === 0 ? (
             <p className="text-sm text-muted-foreground">Aucun réveil noté.</p>
           ) : (
-            <ul className="space-y-3">
+            <ul className="space-y-4">
               {nuit.reveils.map((r) => (
                 <li key={r.id} className="space-y-2">
                   <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Supprimer ce réveil"
+                      onClick={() => maj({ reveils: nuit.reveils.filter((x) => x.id !== r.id) })}
+                      className="carte-douce grid size-12 shrink-0 place-items-center text-destructive"
+                    >
+                      <Trash2 className="size-4" aria-hidden />
+                    </button>
                     <SelecteurHeure
                       label="Début"
                       valeur={r.debut}
+                      fige={!!figes[r.id]}
                       onChange={(v) =>
                         maj({
                           reveils: nuit.reveils.map((x) =>
@@ -304,52 +343,59 @@ function Saisie() {
                     <SelecteurHeure
                       label="Fin"
                       valeur={r.fin}
+                      fige={!!figes[r.id]}
                       onChange={(v) =>
                         maj({
                           reveils: nuit.reveils.map((x) => (x.id === r.id ? { ...x, fin: v } : x)),
                         })
                       }
                     />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <BoutonValider fige={!!figes[r.id]} onToggle={() => basculer(r.id)} />
                     <button
                       type="button"
-                      aria-label="Supprimer ce réveil"
-                      onClick={() => maj({ reveils: nuit.reveils.filter((x) => x.id !== r.id) })}
-                      className="carte-douce grid size-12 shrink-0 place-items-center text-destructive"
-                    >
-                      <Trash2 className="size-4" aria-hidden />
-                    </button>
-                  </div>
-                  <label className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      checked={!!r.demi}
-                      onChange={(e) =>
+                      aria-pressed={!!r.demi}
+                      onClick={() =>
                         maj({
                           reveils: nuit.reveils.map((x) =>
-                            x.id === r.id ? { ...x, demi: e.target.checked } : x,
+                            x.id === r.id ? { ...x, demi: !x.demi } : x,
                           ),
                         })
                       }
-                      className="size-5 accent-[var(--color-primary)]"
-                    />
-                    1/2 réveil (hachures zébrées)
-                  </label>
+                      className={cn(
+                        "min-h-12 rounded-2xl px-4 text-sm font-semibold transition-colors",
+                        r.demi ? "bg-primary text-primary-foreground" : "carte-douce text-muted-foreground",
+                      )}
+                    >
+                      1/2 réveil
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
           )}
         </Carte>
 
-        <Carte numero={4} titre="Long réveil">
+        <Carte
+          numero={4}
+          titre="Heure de lever"
+          action={<BoutonValider fige={!!figes["lever"]} onToggle={() => basculer("lever")} />}
+        >
+          <SelecteurHeure
+            label="Lever"
+            valeur={nuit.heureLever}
+            fige={!!figes["lever"]}
+            onChange={(v) => maj({ heureLever: v })}
+          />
+        </Carte>
+
+        <Carte numero={5} titre="Long réveil">
           <CurseurDuree
             label="Éveillé avant le lever"
             valeur={nuit.longReveil}
             onChange={(v) => maj({ longReveil: v })}
           />
-        </Carte>
-
-        <Carte numero={5} titre="Heure de lever">
-          <SelecteurHeure label="Lever" valeur={nuit.heureLever} onChange={(v) => maj({ heureLever: v })} />
         </Carte>
 
         <Carte
@@ -371,35 +417,40 @@ function Saisie() {
           {nuit.siestes.length === 0 ? (
             <p className="text-sm text-muted-foreground">Pas de sieste.</p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-4">
               {nuit.siestes.map((s) => (
-                <li key={s.id} className="flex items-center gap-2">
-                  <SelecteurHeure
-                    label="Début"
-                    valeur={s.debut}
-                    onChange={(v) =>
-                      maj({
-                        siestes: nuit.siestes.map((x) =>
-                          x.id === s.id ? { ...x, debut: v, fin: decaler(v, x.debut, x.fin) } : x,
-                        ),
-                      })
-                    }
-                  />
-                  <SelecteurHeure
-                    label="Fin"
-                    valeur={s.fin}
-                    onChange={(v) =>
-                      maj({ siestes: nuit.siestes.map((x) => (x.id === s.id ? { ...x, fin: v } : x)) })
-                    }
-                  />
-                  <button
-                    type="button"
-                    aria-label="Supprimer cette sieste"
-                    onClick={() => maj({ siestes: nuit.siestes.filter((x) => x.id !== s.id) })}
-                    className="carte-douce grid size-12 shrink-0 place-items-center text-destructive"
-                  >
-                    <Trash2 className="size-4" aria-hidden />
-                  </button>
+                <li key={s.id} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Supprimer cette sieste"
+                      onClick={() => maj({ siestes: nuit.siestes.filter((x) => x.id !== s.id) })}
+                      className="carte-douce grid size-12 shrink-0 place-items-center text-destructive"
+                    >
+                      <Trash2 className="size-4" aria-hidden />
+                    </button>
+                    <SelecteurHeure
+                      label="Début"
+                      valeur={s.debut}
+                      fige={!!figes[s.id]}
+                      onChange={(v) =>
+                        maj({
+                          siestes: nuit.siestes.map((x) =>
+                            x.id === s.id ? { ...x, debut: v, fin: decaler(v, x.debut, x.fin) } : x,
+                          ),
+                        })
+                      }
+                    />
+                    <SelecteurHeure
+                      label="Fin"
+                      valeur={s.fin}
+                      fige={!!figes[s.id]}
+                      onChange={(v) =>
+                        maj({ siestes: nuit.siestes.map((x) => (x.id === s.id ? { ...x, fin: v } : x)) })
+                      }
+                    />
+                  </div>
+                  <BoutonValider fige={!!figes[s.id]} onToggle={() => basculer(s.id)} />
                 </li>
               ))}
             </ul>
@@ -423,24 +474,28 @@ function Saisie() {
           {nuit.somnolences.length === 0 ? (
             <p className="text-sm text-muted-foreground">Aucune somnolence dans la journée.</p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-4">
               {nuit.somnolences.map((h, i) => (
-                <li key={i} className="flex items-center gap-2">
-                  <SelecteurHeure
-                    label="Moment"
-                    valeur={h}
-                    onChange={(v) =>
-                      maj({ somnolences: nuit.somnolences.map((x, j) => (j === i ? v : x)) })
-                    }
-                  />
-                  <button
-                    type="button"
-                    aria-label="Supprimer cette somnolence"
-                    onClick={() => maj({ somnolences: nuit.somnolences.filter((_, j) => j !== i) })}
-                    className="carte-douce grid size-12 shrink-0 place-items-center text-destructive"
-                  >
-                    <Trash2 className="size-4" aria-hidden />
-                  </button>
+                <li key={i} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Supprimer cette somnolence"
+                      onClick={() => maj({ somnolences: nuit.somnolences.filter((_, j) => j !== i) })}
+                      className="carte-douce grid size-12 shrink-0 place-items-center text-destructive"
+                    >
+                      <Trash2 className="size-4" aria-hidden />
+                    </button>
+                    <SelecteurHeure
+                      label="Moment"
+                      valeur={h}
+                      fige={!!figes[`som-${i}`]}
+                      onChange={(v) =>
+                        maj({ somnolences: nuit.somnolences.map((x, j) => (j === i ? v : x)) })
+                      }
+                    />
+                  </div>
+                  <BoutonValider fige={!!figes[`som-${i}`]} onToggle={() => basculer(`som-${i}`)} />
                 </li>
               ))}
             </ul>
@@ -485,7 +540,15 @@ function Saisie() {
                   key={t}
                   className="flex items-center gap-1 rounded-full bg-secondary py-1 pl-3 pr-1 text-sm"
                 >
-                  <button type="button" onClick={() => maj({ traitement: t })} className="font-medium">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      maj({
+                        traitement: nuit.traitement.trim() ? `${nuit.traitement.trim()}, ${t}` : t,
+                      })
+                    }
+                    className="font-medium"
+                  >
                     {t}
                   </button>
                   <button

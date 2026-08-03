@@ -1,9 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Download, FileJson, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { SelecteurDate } from "@/components/selecteur-date";
+import { SelecteurHeure } from "@/components/selecteur-heure";
+import { BoutonValider } from "@/components/bouton-valider";
 import { cn } from "@/lib/utils";
 import {
   chargerNuits,
@@ -63,10 +66,39 @@ function Champ({
   );
 }
 
+/** Valeur réglée à la roulette, figée après validation. */
+function ChampRoue({
+  label,
+  children,
+  fige,
+  onToggle,
+}: {
+  label: string;
+  children: React.ReactNode;
+  fige: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        <BoutonValider fige={fige} onToggle={onToggle} />
+      </div>
+      {children}
+    </div>
+  );
+}
+
 function Parametres() {
   const reglages = useReglages();
   const nuits = useNuits();
   const fichier = useRef<HTMLInputElement>(null);
+  const [figes, setFiges] = useState<Record<string, boolean>>({
+    naissance: true,
+    soir: true,
+    matin: true,
+  });
+  const basculer = (cle: string) => setFiges((f) => ({ ...f, [cle]: !f[cle] }));
 
   const maj = (patch: Partial<Reglages>) => enregistrerReglages({ ...reglages, ...patch });
 
@@ -83,12 +115,17 @@ function Parametres() {
               onChange={(e) => maj({ prenom: e.target.value })}
             />
             <Champ label="Nom" value={reglages.nom} onChange={(e) => maj({ nom: e.target.value })} />
-            <Champ
+            <ChampRoue
               label="Date de naissance"
-              type="date"
-              value={reglages.dateNaissance}
-              onChange={(e) => maj({ dateNaissance: e.target.value })}
-            />
+              fige={!!figes["naissance"]}
+              onToggle={() => basculer("naissance")}
+            >
+              <SelecteurDate
+                valeur={reglages.dateNaissance}
+                fige={!!figes["naissance"]}
+                onChange={(v) => maj({ dateNaissance: v })}
+              />
+            </ChampRoue>
             <Champ
               label="Centre / médecin"
               value={reglages.centre}
@@ -131,18 +168,20 @@ function Parametres() {
             Heures suggérées pour penser à remplir votre agenda.
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Champ
-              label="Rappel du soir"
-              type="time"
-              value={reglages.rappelSoir ?? ""}
-              onChange={(e) => maj({ rappelSoir: e.target.value || null })}
-            />
-            <Champ
-              label="Rappel du matin"
-              type="time"
-              value={reglages.rappelMatin ?? ""}
-              onChange={(e) => maj({ rappelMatin: e.target.value || null })}
-            />
+            <ChampRoue label="Rappel du soir" fige={!!figes["soir"]} onToggle={() => basculer("soir")}>
+              <SelecteurHeure
+                valeur={reglages.rappelSoir ?? "22:00"}
+                fige={!!figes["soir"]}
+                onChange={(v) => maj({ rappelSoir: v })}
+              />
+            </ChampRoue>
+            <ChampRoue label="Rappel du matin" fige={!!figes["matin"]} onToggle={() => basculer("matin")}>
+              <SelecteurHeure
+                valeur={reglages.rappelMatin ?? "08:00"}
+                fige={!!figes["matin"]}
+                onChange={(v) => maj({ rappelMatin: v })}
+              />
+            </ChampRoue>
           </div>
         </Section>
 
