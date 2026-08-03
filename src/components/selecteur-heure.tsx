@@ -109,11 +109,14 @@ export function SelecteurHeure({
   valeur,
   onChange,
   className,
+  fige = false,
 }: {
   label?: string;
   valeur: string;
   onChange: (v: string) => void;
   className?: string;
+  /** Valeur validée : affichage simple, non modifiable. */
+  fige?: boolean;
 }) {
   const parts = valeur.split(":");
   const h = Number(parts[0] ?? 0) || 0;
@@ -126,6 +129,14 @@ export function SelecteurHeure({
       {label && (
         <span className="block text-center text-xs font-medium text-muted-foreground">{label}</span>
       )}
+      {fige ? (
+        <div
+          className="grid place-items-center text-3xl font-extrabold tabular-nums"
+          style={{ height: VISIBLES * HAUTEUR }}
+        >
+          {`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`}
+        </div>
+      ) : (
       <div className="relative mt-1">
         <div
           className="pointer-events-none absolute inset-x-1 rounded-xl bg-background/70"
@@ -143,6 +154,7 @@ export function SelecteurHeure({
           />
         </div>
       </div>
+      )}
     </div>
   );
 }
