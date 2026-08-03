@@ -75,11 +75,11 @@ export function Molette({
       }}
       style={{
         height: VISIBLES * HAUTEUR,
+        width: largeur,
         scrollSnapType: "y mandatory",
         maskImage: "linear-gradient(to bottom, transparent, #000 35%, #000 65%, transparent)",
         WebkitMaskImage: "linear-gradient(to bottom, transparent, #000 35%, #000 65%, transparent)",
       }}
-      style2-placeholder
       className="overflow-y-auto overscroll-contain outline-none [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <div style={{ height: HAUTEUR }} aria-hidden />
