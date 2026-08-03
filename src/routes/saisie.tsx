@@ -133,7 +133,6 @@ function Saisie() {
   /** Valeurs validées/figées (clés : "coucher", "lever", id de réveil/sieste, "som-i"). */
   const [figes, setFiges] = useState<Record<string, boolean>>({});
   const basculer = (cle: string) => setFiges((f) => ({ ...f, [cle]: !f[cle] }));
-  const ouvrir = (cle: string) => setFiges((f) => (f[cle] ? { ...f, [cle]: false } : f));
   /** La nuit affichée existe déjà dans le journal (coche verte). */
   const [enregistree, setEnregistree] = useState(!!existante);
   /** Des paramètres ont été touchés : l'aperçu repasse en couleur. */
@@ -541,7 +540,15 @@ function Saisie() {
                   key={t}
                   className="flex items-center gap-1 rounded-full bg-secondary py-1 pl-3 pr-1 text-sm"
                 >
-                  <button type="button" onClick={() => maj({ traitement: t })} className="font-medium">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      maj({
+                        traitement: nuit.traitement.trim() ? `${nuit.traitement.trim()}, ${t}` : t,
+                      })
+                    }
+                    className="font-medium"
+                  >
                     {t}
                   </button>
                   <button
