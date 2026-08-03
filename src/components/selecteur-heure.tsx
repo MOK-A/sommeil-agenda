@@ -1,28 +1,33 @@
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
-const HAUTEUR = 40;
+export const HAUTEUR = 40;
 const VISIBLES = 3; // hauteur totale = 3 lignes, comme l'alarme iOS
-const REPETITIONS = 11; // la liste est répétée pour un défilement "infini"
 const HEURES = Array.from({ length: 24 }, (_, i) => i);
 const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5);
 
 /** Molette défilante infinie à inertie native, calée sur la ligne centrale. */
-function Molette({
+export function Molette({
   valeurs,
   valeur,
   onChange,
   aria,
+  largeur = "3.6rem",
+  format = (v: number) => String(v).padStart(2, "0"),
 }: {
   valeurs: number[];
   valeur: number;
   onChange: (v: number) => void;
   aria: string;
+  largeur?: string;
+  format?: (v: number) => string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const minuteur = useRef<ReturnType<typeof setTimeout> | null>(null);
   const defile = useRef(false);
   const taille = valeurs.length;
+  // La liste est répétée pour un défilement "infini" (moins de copies si longue).
+  const REPETITIONS = taille > 40 ? 3 : 11;
   const index = Math.max(0, valeurs.indexOf(valeur));
   const liste = Array.from({ length: REPETITIONS * taille }, (_, i) => valeurs[i % taille]!);
   const blocCentral = Math.floor(REPETITIONS / 2);
@@ -74,7 +79,8 @@ function Molette({
         maskImage: "linear-gradient(to bottom, transparent, #000 35%, #000 65%, transparent)",
         WebkitMaskImage: "linear-gradient(to bottom, transparent, #000 35%, #000 65%, transparent)",
       }}
-      className="w-[3.6rem] overflow-y-auto overscroll-contain outline-none [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      style2-placeholder
+      className="overflow-y-auto overscroll-contain outline-none [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <div style={{ height: HAUTEUR }} aria-hidden />
       {liste.map((v, i) => (
@@ -89,7 +95,7 @@ function Molette({
             v === valeur ? "text-3xl font-extrabold" : "text-2xl font-semibold text-muted-foreground",
           )}
         >
-          {String(v).padStart(2, "0")}
+          {format(v)}
         </div>
       ))}
       <div style={{ height: HAUTEUR }} aria-hidden />
