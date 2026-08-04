@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   Check,
@@ -12,7 +12,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { fr } from "date-fns/locale";
 import { ApercuGrille } from "@/components/apercu-grille";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SelecteurNote } from "@/components/selecteur-note";
 import { SelecteurHeure } from "@/components/selecteur-heure";
 import { BoutonValider } from "@/components/bouton-valider";
@@ -35,7 +38,7 @@ import {
   useNuits,
 } from "@/lib/sleep/store";
 import { supprimerAvecAnnulation } from "@/lib/sleep/suppression";
-import { ajouterJours, dateISO, fromMinutes, libelleNuit, toMinutes } from "@/lib/sleep/time";
+import { ajouterJours, dateISO, fromMinutes, libelleNuit, parseISO, toMinutes } from "@/lib/sleep/time";
 import type { Nuit } from "@/lib/sleep/types";
 
 const recherche = z.object({
@@ -121,7 +124,7 @@ function Saisie() {
   const navigate = useNavigate();
   const traitements = useTraitements();
   const remarques = useRemarques();
-  const dateRef = useRef<HTMLInputElement>(null);
+  const [calendrierOuvert, setCalendrierOuvert] = useState(false);
   const nuits = useNuits();
   /** Date maximale autorisée : la journée en cours (pas de nuit dans le futur). */
   const dateMax = dateISO(new Date());
@@ -202,40 +205,46 @@ function Saisie() {
             <ChevronLeft className="size-6" aria-hidden />
           </button>
 
-          <button
-            type="button"
-            aria-label="Choisir la date de la nuit"
-            onClick={() => {
-              const el = dateRef.current;
-              if (!el) return;
-              const avecPicker = el as HTMLInputElement & { showPicker?: () => void };
-              if (typeof avecPicker.showPicker === "function") avecPicker.showPicker();
-              else avecPicker.click();
-            }}
-            className={cn(
-              "relative flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-3 font-bold text-primary-foreground shadow-sm transition-all",
-              compact ? "min-h-10 text-sm" : "min-h-14 text-lg",
-            )}
-          >
-            <CalendarDays className={compact ? "size-4 shrink-0" : "size-5 shrink-0"} aria-hidden />
-            <span className="truncate">{libelleNuit(nuit.date)}</span>
-            {enregistree && (
-              <CheckCircle2
-                className={cn("shrink-0 text-[var(--color-tres-bien)]", compact ? "size-4" : "size-5")}
-                aria-label="Nuit déjà enregistrée"
+          <Popover open={calendrierOuvert} onOpenChange={setCalendrierOuvert}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="Choisir la date de la nuit"
+                className={cn(
+                  "relative flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl px-3 font-bold shadow-sm transition-all",
+                  enregistree
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground",
+                  compact ? "min-h-10 text-sm" : "min-h-14 text-lg",
+                )}
+              >
+                <CalendarDays className={compact ? "size-4 shrink-0" : "size-5 shrink-0"} aria-hidden />
+                <span className="truncate">{libelleNuit(nuit.date)}</span>
+                {enregistree && (
+                  <CheckCircle2
+                    className={cn("shrink-0 text-[var(--color-tres-bien)]", compact ? "size-4" : "size-5")}
+                    aria-label="Nuit déjà enregistrée"
+                  />
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="center">
+              <Calendar
+                mode="single"
+                locale={fr}
+                defaultMonth={parseISO(nuit.date)}
+                selected={parseISO(nuit.date)}
+                disabled={{ after: parseISO(dateMax) }}
+                onSelect={(d) => {
+                  if (!d) return;
+                  changerDate(dateISO(d));
+                  setCalendrierOuvert(false);
+                }}
+                initialFocus
+                className="p-3 pointer-events-auto"
               />
-            )}
-            <input
-              ref={dateRef}
-              type="date"
-              value={nuit.date}
-              max={dateMax}
-              onChange={(e) => changerDate(e.target.value)}
-              tabIndex={-1}
-              aria-hidden
-              className="pointer-events-none absolute bottom-0 left-1/2 size-px opacity-0"
-            />
-          </button>
+            </PopoverContent>
+          </Popover>
 
           <button
             type="button"
@@ -352,7 +361,6 @@ function Saisie() {
                     />
                   </div>
                   <div className="flex items-center justify-between gap-2">
-                    <BoutonValider fige={!!figes[r.id]} onToggle={() => basculer(r.id)} />
                     <button
                       type="button"
                       aria-pressed={!!r.demi}
@@ -370,6 +378,7 @@ function Saisie() {
                     >
                       1/2 réveil
                     </button>
+                    <BoutonValider fige={!!figes[r.id]} onToggle={() => basculer(r.id)} />
                   </div>
                 </li>
               ))}
@@ -450,7 +459,9 @@ function Saisie() {
                       }
                     />
                   </div>
-                  <BoutonValider fige={!!figes[s.id]} onToggle={() => basculer(s.id)} />
+                  <div className="flex justify-end">
+                    <BoutonValider fige={!!figes[s.id]} onToggle={() => basculer(s.id)} />
+                  </div>
                 </li>
               ))}
             </ul>
@@ -495,7 +506,9 @@ function Saisie() {
                       }
                     />
                   </div>
-                  <BoutonValider fige={!!figes[`som-${i}`]} onToggle={() => basculer(`som-${i}`)} />
+                  <div className="flex justify-end">
+                    <BoutonValider fige={!!figes[`som-${i}`]} onToggle={() => basculer(`som-${i}`)} />
+                  </div>
                 </li>
               ))}
             </ul>
