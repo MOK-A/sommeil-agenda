@@ -352,7 +352,6 @@ function Saisie() {
                     />
                   </div>
                   <div className="flex items-center justify-between gap-2">
-                    <BoutonValider fige={!!figes[r.id]} onToggle={() => basculer(r.id)} />
                     <button
                       type="button"
                       aria-pressed={!!r.demi}
@@ -370,6 +369,7 @@ function Saisie() {
                     >
                       1/2 réveil
                     </button>
+                    <BoutonValider fige={!!figes[r.id]} onToggle={() => basculer(r.id)} />
                   </div>
                 </li>
               ))}
