@@ -202,40 +202,46 @@ function Saisie() {
             <ChevronLeft className="size-6" aria-hidden />
           </button>
 
-          <button
-            type="button"
-            aria-label="Choisir la date de la nuit"
-            onClick={() => {
-              const el = dateRef.current;
-              if (!el) return;
-              const avecPicker = el as HTMLInputElement & { showPicker?: () => void };
-              if (typeof avecPicker.showPicker === "function") avecPicker.showPicker();
-              else avecPicker.click();
-            }}
-            className={cn(
-              "relative flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-3 font-bold text-primary-foreground shadow-sm transition-all",
-              compact ? "min-h-10 text-sm" : "min-h-14 text-lg",
-            )}
-          >
-            <CalendarDays className={compact ? "size-4 shrink-0" : "size-5 shrink-0"} aria-hidden />
-            <span className="truncate">{libelleNuit(nuit.date)}</span>
-            {enregistree && (
-              <CheckCircle2
-                className={cn("shrink-0 text-[var(--color-tres-bien)]", compact ? "size-4" : "size-5")}
-                aria-label="Nuit déjà enregistrée"
+          <Popover open={calendrierOuvert} onOpenChange={setCalendrierOuvert}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="Choisir la date de la nuit"
+                className={cn(
+                  "relative flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl px-3 font-bold shadow-sm transition-all",
+                  enregistree
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground",
+                  compact ? "min-h-10 text-sm" : "min-h-14 text-lg",
+                )}
+              >
+                <CalendarDays className={compact ? "size-4 shrink-0" : "size-5 shrink-0"} aria-hidden />
+                <span className="truncate">{libelleNuit(nuit.date)}</span>
+                {enregistree && (
+                  <CheckCircle2
+                    className={cn("shrink-0 text-[var(--color-tres-bien)]", compact ? "size-4" : "size-5")}
+                    aria-label="Nuit déjà enregistrée"
+                  />
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="center">
+              <Calendar
+                mode="single"
+                locale={fr}
+                defaultMonth={parseISO(nuit.date)}
+                selected={parseISO(nuit.date)}
+                disabled={{ after: parseISO(dateMax) }}
+                onSelect={(d) => {
+                  if (!d) return;
+                  changerDate(dateISO(d));
+                  setCalendrierOuvert(false);
+                }}
+                initialFocus
+                className="p-3 pointer-events-auto"
               />
-            )}
-            <input
-              ref={dateRef}
-              type="date"
-              value={nuit.date}
-              max={dateMax}
-              onChange={(e) => changerDate(e.target.value)}
-              tabIndex={-1}
-              aria-hidden
-              className="pointer-events-none absolute bottom-0 left-1/2 size-px opacity-0"
-            />
-          </button>
+            </PopoverContent>
+          </Popover>
 
           <button
             type="button"
