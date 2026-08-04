@@ -450,7 +450,9 @@ function Saisie() {
                       }
                     />
                   </div>
-                  <BoutonValider fige={!!figes[s.id]} onToggle={() => basculer(s.id)} />
+                  <div className="flex justify-end">
+                    <BoutonValider fige={!!figes[s.id]} onToggle={() => basculer(s.id)} />
+                  </div>
                 </li>
               ))}
             </ul>
@@ -495,7 +497,9 @@ function Saisie() {
                       }
                     />
                   </div>
-                  <BoutonValider fige={!!figes[`som-${i}`]} onToggle={() => basculer(`som-${i}`)} />
+                  <div className="flex justify-end">
+                    <BoutonValider fige={!!figes[`som-${i}`]} onToggle={() => basculer(`som-${i}`)} />
+                  </div>
                 </li>
               ))}
             </ul>
