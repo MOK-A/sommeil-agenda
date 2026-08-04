@@ -12,7 +12,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { fr } from "date-fns/locale";
 import { ApercuGrille } from "@/components/apercu-grille";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SelecteurNote } from "@/components/selecteur-note";
 import { SelecteurHeure } from "@/components/selecteur-heure";
 import { BoutonValider } from "@/components/bouton-valider";
@@ -35,7 +38,7 @@ import {
   useNuits,
 } from "@/lib/sleep/store";
 import { supprimerAvecAnnulation } from "@/lib/sleep/suppression";
-import { ajouterJours, dateISO, fromMinutes, libelleNuit, toMinutes } from "@/lib/sleep/time";
+import { ajouterJours, dateISO, fromMinutes, libelleNuit, parseISO, toMinutes } from "@/lib/sleep/time";
 import type { Nuit } from "@/lib/sleep/types";
 
 const recherche = z.object({
@@ -121,7 +124,7 @@ function Saisie() {
   const navigate = useNavigate();
   const traitements = useTraitements();
   const remarques = useRemarques();
-  const dateRef = useRef<HTMLInputElement>(null);
+  const [calendrierOuvert, setCalendrierOuvert] = useState(false);
   const nuits = useNuits();
   /** Date maximale autorisée : la journée en cours (pas de nuit dans le futur). */
   const dateMax = dateISO(new Date());
